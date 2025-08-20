@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+:root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -24,9 +24,9 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 199 89% 48%;
     --radius: 0.5rem;
-  }
+}
 
-  .dark {
+.dark {
     --background: 0 0% 4%;
     --foreground: 0 0% 100%;
     --card: 0 0% 10%;
