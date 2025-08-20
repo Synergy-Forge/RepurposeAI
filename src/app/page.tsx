@@ -1,103 +1,288 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { trpc } from '@/lib/trpc-client';
+import { useAppStore } from '@/lib/store';
+import { toast } from 'sonner';
+
+export default function HomePage() {
+  const { data: session, status } = useSession();
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const { user, setUser } = useAppStore();
+  const { processingVideos, addProcessingVideo, updateVideoStatus } = useAppStore();
+
+  const uploadVideoMutation = trpc.video.uploadVideo.useMutation();
+  const processVideoMutation = trpc.video.processVideo.useMutation();
+  const getUserVideosQuery = trpc.video.getUserVideos.useQuery(undefined, {
+    enabled: !!session?.user,
+  });
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('video/')) {
+      setVideoFile(file);
+    } else {
+      toast.error('Please select a valid video file');
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!videoFile || !title.trim()) {
+      toast.error('Please select a video file and enter a title');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Convert video to base64
+      const arrayBuffer = await videoFile.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+      // Upload video
+      const uploadResult = await uploadVideoMutation.mutateAsync({
+        title,
+        description,
+        videoData: base64,
+      });
+
+      // Add to processing videos
+      addProcessingVideo({
+        id: uploadResult.videoId,
+        title,
+        status: 'uploading',
+        progress: 0,
+      });
+
+      // Process video
+      updateVideoStatus(uploadResult.videoId, 'processing', 50);
+      
+      const processResult = await processVideoMutation.mutateAsync({
+        videoId: uploadResult.videoId,
+      });
+
+      updateVideoStatus(uploadResult.videoId, 'completed', 100);
+      
+      toast.success('Video processed successfully!');
+      
+      // Reset form
+      setVideoFile(null);
+      setTitle('');
+      setDescription('');
+      
+      // Refresh videos list
+      getUserVideosQuery.refetch();
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload video');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">Repurpose AI</CardTitle>
+            <CardDescription>
+              Transform your long-form videos into engaging short-form content
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="w-full" asChild>
+              <a href="/api/auth/signin">Sign in with Google</a>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-2xl font-bold text-primary">Repurpose AI</h1>
+            <Badge variant="secondary">Beta</Badge>
+          </div>
+          
+                     <div className="flex items-center space-x-4">
+             <Button variant="ghost" asChild>
+               <a href="/subscription">Subscription</a>
+             </Button>
+             <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                   <Avatar className="h-8 w-8">
+                     <AvatarImage src={session.user?.image || ''} alt={session.user?.name || ''} />
+                     <AvatarFallback>{session.user?.name?.charAt(0)}</AvatarFallback>
+                   </Avatar>
+                 </Button>
+               </DropdownMenuTrigger>
+               <DropdownMenuContent className="w-56" align="end" forceMount>
+                 <DropdownMenuItem asChild>
+                   <a href="/subscription">Subscription</a>
+                 </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                   <a href="/api/auth/signout">Sign out</a>
+                 </DropdownMenuItem>
+               </DropdownMenuContent>
+             </DropdownMenu>
+           </div>
         </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Upload Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload Video</CardTitle>
+              <CardDescription>
+                Upload your long-form video to create engaging short-form content
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="video">Video File</Label>
+                <Input
+                  id="video"
+                  type="file"
+                  accept="video/*"
+                  onChange={handleFileChange}
+                  disabled={isUploading}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter video title"
+                  disabled={isUploading}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter video description"
+                  disabled={isUploading}
+                />
+              </div>
+              
+              <Button 
+                onClick={handleUpload} 
+                disabled={isUploading || !videoFile || !title.trim()}
+                className="w-full"
+              >
+                {isUploading ? 'Processing...' : 'Upload & Process'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Processing Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Processing Status</CardTitle>
+              <CardDescription>
+                Track the progress of your video processing
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {processingVideos.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  No videos being processed
+                </p>
+              ) : (
+                processingVideos.map((video) => (
+                  <div key={video.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{video.title}</span>
+                      <Badge variant={video.status === 'completed' ? 'default' : 'secondary'}>
+                        {video.status}
+                      </Badge>
+                    </div>
+                    <Progress value={video.progress} className="w-full" />
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Videos List */}
+        {getUserVideosQuery.data && getUserVideosQuery.data.length > 0 && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Your Videos</CardTitle>
+              <CardDescription>
+                View and manage your processed videos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                 {getUserVideosQuery.data.map((video: any) => (
+                   <Card key={video.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                     <CardContent className="p-4">
+                       <div className="space-y-2">
+                         <h3 className="font-semibold">{video.title}</h3>
+                         <p className="text-sm text-muted-foreground">{video.description}</p>
+                         <div className="flex items-center justify-between">
+                           <Badge variant={video.status === 'completed' ? 'default' : 'secondary'}>
+                             {video.status}
+                           </Badge>
+                           <span className="text-xs text-muted-foreground">
+                             {video.clips.length} clips
+                           </span>
+                         </div>
+                         {video.status === 'completed' && (
+                           <Button asChild className="w-full mt-2" size="sm">
+                             <a href={`/video/${video.id}`}>View Clips</a>
+                           </Button>
+                         )}
+                       </div>
+                     </CardContent>
+                   </Card>
+                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
