@@ -10,7 +10,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 async function upsertSubscription(subscription: Stripe.Subscription) {
-  const customerId = subscription.customer;
+  const customerId = subscription.customer as string;
 
   // Find user by Stripe customer ID
   const user = await prisma.user.findUnique({
@@ -37,7 +37,7 @@ async function upsertSubscription(subscription: Stripe.Subscription) {
 }
 
 async function removeSubscription(subscription: Stripe.Subscription) {
-  const customerId = subscription.customer;
+  const customerId = subscription.customer as string;
 
   const user = await prisma.user.findUnique({
     where: { stripeCustomerId: customerId },
