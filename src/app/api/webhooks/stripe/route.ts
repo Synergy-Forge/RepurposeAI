@@ -17,23 +17,23 @@ async function upsertSubscription(subscription: Stripe.Subscription) {
     where: { stripeCustomerId: customerId },
   });
 
-  if (user) {
-    const status = subscription.status === 'active' ? 'pro' : 'free';
-    const isCanceled =
-      subscription.cancel_at_period_end && subscription.cancel_at;
+  if (!user) return;
 
-    const endDate = isCanceled
-      ? new Date((subscription.cancel_at as number) * 1000)
-      : null;
+  const status = subscription.status === 'active' ? 'pro' : 'free';
+  const isCanceled =
+    subscription.cancel_at_period_end && subscription.cancel_at;
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        subscriptionStatus: status,
-        subscriptionEndDate: endDate,
-      },
-    });
-  }
+  const endDate = isCanceled
+    ? new Date((subscription.cancel_at as number) * 1000)
+    : null;
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      subscriptionStatus: status,
+      subscriptionEndDate: endDate,
+    },
+  });
 }
 
 async function removeSubscription(subscription: Stripe.Subscription) {
@@ -43,15 +43,15 @@ async function removeSubscription(subscription: Stripe.Subscription) {
     where: { stripeCustomerId: customerId },
   });
 
-  if (user) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        subscriptionStatus: 'free',
-        subscriptionEndDate: null,
-      },
-    });
-  }
+  if (!user) return;
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      subscriptionStatus: 'free',
+      subscriptionEndDate: null,
+    },
+  });
 }
 
 async function handleSubscriptionEvent(event: Stripe.Event) {
