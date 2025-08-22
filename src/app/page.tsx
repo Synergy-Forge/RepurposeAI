@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { trpc } from '@/lib/trpc-client';
 import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
+import { Video } from '@/lib/types';
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -22,7 +24,6 @@ export default function HomePage() {
   const [description, setDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   
-  const { user, setUser } = useAppStore();
   const { processingVideos, addProcessingVideo, updateVideoStatus } = useAppStore();
 
   const uploadVideoMutation = trpc.video.uploadVideo.useMutation();
@@ -71,7 +72,7 @@ export default function HomePage() {
       // Process video
       updateVideoStatus(uploadResult.videoId, 'processing', 50);
       
-      const processResult = await processVideoMutation.mutateAsync({
+      await processVideoMutation.mutateAsync({
         videoId: uploadResult.videoId,
       });
 
@@ -115,7 +116,7 @@ export default function HomePage() {
           </CardHeader>
           <CardContent>
             <Button className="w-full" asChild>
-              <a href="/api/auth/signin">Sign in with Google</a>
+              <Link href="/api/auth/signin">Sign in with Google</Link>
             </Button>
           </CardContent>
         </Card>
@@ -135,7 +136,7 @@ export default function HomePage() {
           
                      <div className="flex items-center space-x-4">
              <Button variant="ghost" asChild>
-               <a href="/subscription">Subscription</a>
+               <Link href="/subscription">Subscription</Link>
              </Button>
              <DropdownMenu>
                <DropdownMenuTrigger asChild>
@@ -148,10 +149,10 @@ export default function HomePage() {
                </DropdownMenuTrigger>
                <DropdownMenuContent className="w-56" align="end" forceMount>
                  <DropdownMenuItem asChild>
-                   <a href="/subscription">Subscription</a>
+                   <Link href="/subscription">Subscription</Link>
                  </DropdownMenuItem>
                  <DropdownMenuItem asChild>
-                   <a href="/api/auth/signout">Sign out</a>
+                   <Link href="/api/auth/signout">Sign out</Link>
                  </DropdownMenuItem>
                </DropdownMenuContent>
              </DropdownMenu>
@@ -255,7 +256,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                 {getUserVideosQuery.data.map((video: any) => (
+                                 {getUserVideosQuery.data.map((video: Video) => (
                    <Card key={video.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                      <CardContent className="p-4">
                        <div className="space-y-2">
@@ -271,7 +272,7 @@ export default function HomePage() {
                          </div>
                          {video.status === 'completed' && (
                            <Button asChild className="w-full mt-2" size="sm">
-                             <a href={`/video/${video.id}`}>View Clips</a>
+                             <Link href={`/video/${video.id}`}>View Clips</Link>
                            </Button>
                          )}
                        </div>

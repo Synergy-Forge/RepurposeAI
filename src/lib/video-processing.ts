@@ -60,7 +60,7 @@ export async function transcribeAudio(audioPath: string): Promise<string> {
   const audioBuffer = await writeFile(audioPath, '');
   
   const transcription = await openai.audio.transcriptions.create({
-    file: audioBuffer as any,
+    file: audioBuffer as Blob,
     model: 'whisper-1',
     response_format: 'text',
   });
@@ -200,7 +200,6 @@ function getScaleForAspectRatio(aspectRatio: string): string {
 
 export async function processVideoToExtractKeyMoments(
   videoPath: string,
-  title: string
 ): Promise<ProcessedClip[]> {
   try {
     // Extract audio
