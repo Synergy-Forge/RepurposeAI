@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 export default function SubscriptionPage() {
   const { data: session } = useSession();
-  
+
   const { data: subscriptionStatus } = trpc.user.getSubscriptionStatus.useQuery(undefined, {
     enabled: !!session?.user,
   });
@@ -103,7 +103,7 @@ export default function SubscriptionPage() {
             </Button>
             <h1 className="text-2xl font-bold">Subscription Plans</h1>
           </div>
-          
+
           {subscriptionStatus && (
             <div className="flex items-center space-x-2">
               <span className="text-sm text-muted-foreground">Current Plan:</span>
@@ -120,15 +120,15 @@ export default function SubscriptionPage() {
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold mb-4">Choose Your Plan</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Select the perfect plan for your video repurposing needs. 
+            Select the perfect plan for your video repurposing needs.
             All plans include our AI-powered processing technology.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {plans.map((plan) => (
-            <Card 
-              key={plan.name} 
+            <Card
+              key={plan.name}
               className={`relative ${plan.popular ? 'ring-2 ring-primary' : ''}`}
             >
               {plan.popular && (
@@ -138,7 +138,7 @@ export default function SubscriptionPage() {
                   </Badge>
                 </div>
               )}
-              
+
               <CardHeader className="text-center">
                 <CardTitle className="text-xl">{plan.name}</CardTitle>
                 <div className="flex items-baseline justify-center space-x-1">
@@ -148,7 +148,7 @@ export default function SubscriptionPage() {
                   )}
                 </div>
               </CardHeader>
-              
+
               <CardContent className="space-y-4">
                 <ul className="space-y-2">
                   {plan.features.map((feature, index) => (
@@ -170,15 +170,15 @@ export default function SubscriptionPage() {
                     </li>
                   ))}
                 </ul>
-                
+
                 <div className="pt-4">
                   {plan.priceId ? (
-                    <Button 
-                      className="w-full" 
+                    <Button
+                      className="w-full"
                       onClick={() => handleSubscribe(plan.priceId!)}
-                      disabled={createCheckoutSessionMutation.isLoading}
+                      disabled={createCheckoutSessionMutation.isPending}
                     >
-                      {createCheckoutSessionMutation.isLoading ? 'Loading...' : 'Subscribe'}
+                      {createCheckoutSessionMutation.isPending ? 'Loading...' : 'Subscribe'}
                     </Button>
                   ) : (
                     <Button className="w-full" variant="outline" disabled>
@@ -205,7 +205,7 @@ export default function SubscriptionPage() {
                 <span className="font-medium">Plan</span>
                 <Badge className="capitalize">{subscriptionStatus.status}</Badge>
               </div>
-              
+
               {subscriptionStatus.endDate && (
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Next billing date</span>
@@ -214,13 +214,13 @@ export default function SubscriptionPage() {
                   </span>
                 </div>
               )}
-              
-              <Button 
+
+              <Button
                 onClick={handleManageSubscription}
-                disabled={createPortalSessionMutation.isLoading}
+                disabled={createPortalSessionMutation.isPending}
                 className="w-full"
               >
-                {createPortalSessionMutation.isLoading ? 'Loading...' : 'Manage Subscription'}
+                {createPortalSessionMutation.isPending ? 'Loading...' : 'Manage Subscription'}
               </Button>
             </CardContent>
           </Card>

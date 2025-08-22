@@ -3,7 +3,7 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-07-30.basil',
 });
 
 export const subscriptionRouter = createTRPCRouter({
@@ -138,13 +138,16 @@ export const subscriptionRouter = createTRPCRouter({
       where: { id: userId },
       data: {
         subscriptionStatus: 'free',
-        subscriptionEndDate: new Date(subscription.current_period_end * 1000),
+        subscriptionEndDate: subscription.cancel_at_period_end
+          ? new Date((subscription.cancel_at as number) * 1000)
+          : null,
       },
     });
 
     return {
       success: true,
-      message: 'Subscription will be cancelled at the end of the current period',
+      message:
+        'Subscription will be cancelled at the end of the current period',
     };
   }),
 });

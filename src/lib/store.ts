@@ -20,8 +20,14 @@ interface VideoProcessingState {
     status: 'uploading' | 'processing' | 'completed' | 'failed';
     progress: number;
   }>;
-  addProcessingVideo: (video: VideoProcessingState['processingVideos'][0]) => void;
-  updateVideoStatus: (id: string, status: VideoProcessingState['processingVideos'][0]['status'], progress?: number) => void;
+  addProcessingVideo: (
+    video: VideoProcessingState['processingVideos'][0]
+  ) => void;
+  updateVideoStatus: (
+    id: string,
+    status: VideoProcessingState['processingVideos'][0]['status'],
+    progress?: number
+  ) => void;
   removeProcessingVideo: (id: string) => void;
 }
 
@@ -36,7 +42,7 @@ type AppState = UserState & VideoProcessingState & UIState;
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       // User state
       user: null,
       setUser: (user) => set({ user }),
@@ -56,7 +62,9 @@ export const useAppStore = create<AppState>()(
         })),
       removeProcessingVideo: (id) =>
         set((state) => ({
-          processingVideos: state.processingVideos.filter((video) => video.id !== id),
+          processingVideos: state.processingVideos.filter(
+            (video) => video.id !== id
+          ),
         })),
 
       // UI state
