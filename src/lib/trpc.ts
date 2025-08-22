@@ -1,5 +1,5 @@
 import { initTRPC, TRPCError } from '@trpc/server';
-import { type CreateNextContextOptions } from '@trpc/server/adapters/next';
+import { type FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
 import { type Session } from 'next-auth';
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth';
@@ -16,9 +16,8 @@ const createInnerTRPCContext = (opts: CreateContextOptions) => {
   };
 };
 
-export const createTRPCContext = async (opts: CreateNextContextOptions) => {
-  const { req, res } = opts;
-  const session = await getServerSession(req, res, authOptions);
+export const createTRPCContext = async (opts: FetchCreateContextFnOptions) => {
+  const session = await getServerSession(opts.req, authOptions);
   return createInnerTRPCContext({
     session,
   });
