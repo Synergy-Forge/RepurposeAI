@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { writeFile, unlink, readFile } from 'fs/promises';
+import { unlink, readFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import OpenAI from 'openai';
