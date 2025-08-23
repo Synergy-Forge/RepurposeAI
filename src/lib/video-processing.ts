@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { writeFile, unlink } from 'fs/promises';
+import { writeFile, unlink, readFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import OpenAI from 'openai';
@@ -63,16 +63,58 @@ export async function extractAudioFromVideo(
 }
 
 export async function transcribeAudio(audioPath: string): Promise<string> {
-  const audioBuffer = await writeFile(audioPath, '');
+  try {
+    const transcription = await openai.audio.transcriptions.create({
+      file: await createFileFromPath(audioPath, 'audio.mp3', 'audio/mp3'),
+      model: 'whisper-1',
+      response_format: 'text',
+    });
 
-  const transcription = await openai.audio.transcriptions.create({
-    file: audioBuffer as unknown as Blob,
-    model: 'whisper-1',
-    response_format: 'text',
-  });
+    await unlink(audioPath);
+    return transcription;
+  } catch (error) {
+    console.error('Error transcribing audio:', error);
+    throw error;
+  }
+}
 
-  await unlink(audioPath);
-  return transcription;
+export async function transcribeVideoWithCaptions(videoPath: string): Promise<{ text: string, captions: string }> {
+  try {
+    const file = await createFileFromPath(videoPath, 'video.mp4', 'video/mp4');
+
+    // Get text transcription
+    const textTranscription = await openai.audio.transcriptions.create({
+      file,
+      model: 'whisper-1',
+      response_format: 'text',
+    });
+
+    // Get VTT captions
+    const vttTranscription = await openai.audio.transcriptions.create({
+      file,
+      model: 'whisper-1',
+      response_format: 'vtt',
+    });
+
+    return {
+      text: textTranscription,
+      captions: vttTranscription
+    };
+  } catch (error) {
+    console.error('Error transcribing video:', error);
+    throw error;
+  }
+}
+
+async function createFileFromPath(
+  filePath: string,
+  filename: string,
+  contentType: string
+): Promise<File> {
+  const buffer = await readFile(filePath);
+  const uint8Array = new Uint8Array(buffer);
+  const blob = new Blob([uint8Array], { type: contentType });
+  return new File([blob], filename, { type: contentType });
 }
 
 export async function generateKeyMoments(
