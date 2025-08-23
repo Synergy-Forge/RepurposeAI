@@ -58,11 +58,11 @@ async function handleSubscriptionEvent(event: Stripe.Event) {
   switch (event.type) {
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
-      upsertSubscription(event.data.object);
+      await upsertSubscription(event.data.object as Stripe.Subscription);
       break;
 
     case 'customer.subscription.deleted':
-      removeSubscription(event.data.object);
+      await removeSubscription(event.data.object as Stripe.Subscription);
       break;
 
     default:
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    handleSubscriptionEvent(event);
+    await handleSubscriptionEvent(event);
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error('Webhook handler failed:', error);
