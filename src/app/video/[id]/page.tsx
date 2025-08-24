@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,11 +43,11 @@ export default function VideoDetailsPage() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Error</CardTitle>
-            <CardDescription>Video not found or you don't have permission to view it.</CardDescription>
+            <CardDescription>Video not found or you don&apos;t have permission to view it.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <a href="/">Go Back</a>
+              <Link href="/">Go Back</Link>
             </Button>
           </CardContent>
         </Card>
@@ -61,7 +62,7 @@ export default function VideoDetailsPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button variant="ghost" asChild>
-              <a href="/">← Back</a>
+              <Link href="/">← Back</Link>
             </Button>
             <h1 className="text-2xl font-bold">{video.title}</h1>
             <Badge variant={video.status === 'completed' ? 'default' : 'secondary'}>

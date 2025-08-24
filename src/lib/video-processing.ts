@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { writeFile, unlink } from 'fs/promises';
+import { unlink, readFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import OpenAI from 'openai';
@@ -28,18 +28,24 @@ export interface ProcessedClip {
   hashtags: string;
 }
 
-export async function extractAudioFromVideo(videoPath: string): Promise<string> {
+export async function extractAudioFromVideo(
+  videoPath: string
+): Promise<string> {
   const audioPath = join(tmpdir(), `${randomUUID()}.mp3`);
-  
+
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn('ffmpeg', [
-      '-i', videoPath,
+      '-i',
+      videoPath,
       '-vn',
-      '-acodec', 'mp3',
-      '-ab', '128k',
-      '-ar', '44100',
+      '-acodec',
+      'mp3',
+      '-ab',
+      '128k',
+      '-ar',
+      '44100',
       '-y',
-      audioPath
+      audioPath,
     ]);
 
     ffmpeg.on('close', (code) => {
@@ -57,19 +63,63 @@ export async function extractAudioFromVideo(videoPath: string): Promise<string> 
 }
 
 export async function transcribeAudio(audioPath: string): Promise<string> {
-  const audioBuffer = await writeFile(audioPath, '');
-  
-  const transcription = await openai.audio.transcriptions.create({
-    file: audioBuffer as any,
-    model: 'whisper-1',
-    response_format: 'text',
-  });
+  try {
+    const transcription = await openai.audio.transcriptions.create({
+      file: await createFileFromPath(audioPath, 'audio.mp3', 'audio/mp3'),
+      model: 'whisper-1',
+      response_format: 'text',
+    });
 
-  await unlink(audioPath);
-  return transcription;
+    await unlink(audioPath);
+    return transcription;
+  } catch (error) {
+    console.error('Error transcribing audio:', error);
+    throw error;
+  }
 }
 
-export async function generateKeyMoments(transcript: string): Promise<KeyMoment[]> {
+export async function transcribeVideoWithCaptions(videoPath: string): Promise<{ text: string, captions: string }> {
+  try {
+    const file = await createFileFromPath(videoPath, 'video.mp4', 'video/mp4');
+
+    // Get text transcription
+    const textTranscription = await openai.audio.transcriptions.create({
+      file,
+      model: 'whisper-1',
+      response_format: 'text',
+    });
+
+    // Get VTT captions
+    const vttTranscription = await openai.audio.transcriptions.create({
+      file,
+      model: 'whisper-1',
+      response_format: 'vtt',
+    });
+
+    return {
+      text: textTranscription,
+      captions: vttTranscription
+    };
+  } catch (error) {
+    console.error('Error transcribing video:', error);
+    throw error;
+  }
+}
+
+async function createFileFromPath(
+  filePath: string,
+  filename: string,
+  contentType: string
+): Promise<File> {
+  const buffer = await readFile(filePath);
+  const uint8Array = new Uint8Array(buffer);
+  const blob = new Blob([uint8Array], { type: contentType });
+  return new File([blob], filename, { type: contentType });
+}
+
+export async function generateKeyMoments(
+  transcript: string
+): Promise<KeyMoment[]> {
   const prompt = `
     Analyze this video transcript and identify 5-8 key moments that would make engaging short-form content.
     For each moment, provide:
@@ -77,9 +127,9 @@ export async function generateKeyMoments(transcript: string): Promise<KeyMoment[
     - A brief description
     - Start and end timestamps (in seconds)
     - Relevant hashtags
-    
+
     Transcript: ${transcript}
-    
+
     Return the response as a JSON array of objects with the following structure:
     [
       {
@@ -106,6 +156,7 @@ export async function generateKeyMoments(transcript: string): Promise<KeyMoment[
   try {
     return JSON.parse(content);
   } catch (error) {
+    console.error('Error generating key moments:', error);
     throw new Error('Failed to parse key moments response');
   }
 }
@@ -117,17 +168,17 @@ export async function generateCaptionsForClip(
 ): Promise<string> {
   const prompt = `
     Create engaging captions for a short video clip.
-    
+
     Title: ${title}
     Description: ${description}
     Transcript excerpt: ${transcript}
-    
+
     Generate captions that are:
     - Engaging and attention-grabbing
     - Optimized for social media
     - Include emojis where appropriate
     - Keep it under 200 characters
-    
+
     Return only the caption text.
   `;
 
@@ -150,23 +201,34 @@ export async function createVideoClip(
   captions?: string
 ): Promise<void> {
   const duration = endTime - startTime;
-  const filterComplex = captions 
-    ? `[0:v]scale=${getScaleForAspectRatio(aspectRatio)},drawtext=text='${captions}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=h-th-10[v]`
+  const filterComplex = captions
+    ? `[0:v]scale=${getScaleForAspectRatio(
+        aspectRatio
+      )},drawtext=text='${captions}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=h-th-10[v]`
     : `[0:v]scale=${getScaleForAspectRatio(aspectRatio)}[v]`;
 
   return new Promise((resolve, reject) => {
     const args = [
-      '-i', originalVideoPath,
-      '-ss', startTime.toString(),
-      '-t', duration.toString(),
-      '-filter_complex', filterComplex,
-      '-map', '[v]',
-      '-map', '0:a',
-      '-c:v', 'libx264',
-      '-c:a', 'aac',
-      '-preset', 'fast',
+      '-i',
+      originalVideoPath,
+      '-ss',
+      startTime.toString(),
+      '-t',
+      duration.toString(),
+      '-filter_complex',
+      filterComplex,
+      '-map',
+      '[v]',
+      '-map',
+      '0:a',
+      '-c:v',
+      'libx264',
+      '-c:a',
+      'aac',
+      '-preset',
+      'fast',
       '-y',
-      outputPath
+      outputPath,
     ];
 
     const ffmpeg = spawn('ffmpeg', args);
@@ -199,34 +261,33 @@ function getScaleForAspectRatio(aspectRatio: string): string {
 }
 
 export async function processVideoToExtractKeyMoments(
-  videoPath: string,
-  title: string
+  videoPath: string
 ): Promise<ProcessedClip[]> {
   try {
     // Extract audio
     const audioPath = await extractAudioFromVideo(videoPath);
-    
+
     // Transcribe audio
     const transcript = await transcribeAudio(audioPath);
-    
+
     // Generate key moments
     const keyMoments = await generateKeyMoments(transcript);
-    
+
     const processedClips: ProcessedClip[] = [];
     const aspectRatios = ['9:16', '1:1', '16:9'];
-    
+
     for (const moment of keyMoments) {
       for (const aspectRatio of aspectRatios) {
         const clipId = randomUUID();
         const outputPath = join(tmpdir(), `${clipId}_${aspectRatio}.mp4`);
-        
+
         // Generate captions
         const captions = await generateCaptionsForClip(
           moment.title,
           moment.description,
           transcript
         );
-        
+
         // Create video clip
         await createVideoClip(
           videoPath,
@@ -236,7 +297,7 @@ export async function processVideoToExtractKeyMoments(
           outputPath,
           captions
         );
-        
+
         processedClips.push({
           title: moment.title,
           description: moment.description,
@@ -249,7 +310,7 @@ export async function processVideoToExtractKeyMoments(
         });
       }
     }
-    
+
     return processedClips;
   } catch (error) {
     console.error('Error processing video:', error);
