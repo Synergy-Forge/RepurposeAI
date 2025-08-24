@@ -70,9 +70,7 @@
 - Enhance error reporting and monitoring
 - Consider implementing rate limiting for API calls
 
-# Felipe Abe - Fixes (Aug 24, 2025)
-
-This document summarizes the critical fixes implemented to resolve authentication flows and stabilize production deployments on Vercel.
+# Felipe Abe - Fixes (23/08/2025)
 
 ### 1. Fixed 404 Error on Login Page
 
