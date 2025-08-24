@@ -70,6 +70,11 @@
 - Enhance error reporting and monitoring
 - Consider implementing rate limiting for API calls
 
+# Larisssa Melo - (23/08/2025)
+
+- Generated the NEXTAUTH_SECRET using Node.js and set it as an environment variable for secure session encryption.
+- Configured the Google Auth environment variables to enable Google sign-in in production.
+
 # Felipe Abe - Fixes (23/08/2025)
 
 ### 1. Fixed 404 Error on Login Page
@@ -86,3 +91,8 @@
 
 - **Problem:** After a successful login, the application would fail with a `Callback` error because the production database schema was not synchronized with the Prisma schema.
 - **Solution:** Implemented an automated database migration workflow. The `package.json` build script was updated to `prisma generate && prisma migrate deploy && next build`. This forces Vercel to apply any new migrations from the committed `prisma/migrations` folder to the production database on every deploy, ensuring the database schema is always in sync with the application code.
+
+
+# Larisssa Melo - (24/08/2025)
+
+- Removed the previous Neon database and the test Prisma instance, and created the new Prisma database that will be used as the official one for the project. Environment variables on Vercel were automatically organized accordingly to reflect this change.
