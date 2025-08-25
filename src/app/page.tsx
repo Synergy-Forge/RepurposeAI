@@ -16,6 +16,7 @@ import { trpc } from '@/lib/trpc-client';
 import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { Video } from '@/lib/types';
+import { signIn } from 'next-auth/react';
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -115,9 +116,11 @@ export default function HomePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" asChild>
-              <Link href="/api/auth/signin">Sign in with Google</Link>
-            </Button>
+          <Button 
+                className="w-full"
+                onClick={() => signIn("google", { callbackUrl: "/" })} >
+                Sign in with Google
+          </Button>
           </CardContent>
         </Card>
       </div>
