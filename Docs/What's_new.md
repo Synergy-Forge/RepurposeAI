@@ -93,6 +93,12 @@
 - **Solution:** Implemented an automated database migration workflow. The `package.json` build script was updated to `prisma generate && prisma migrate deploy && next build`. This forces Vercel to apply any new migrations from the committed `prisma/migrations` folder to the production database on every deploy, ensuring the database schema is always in sync with the application code.
 
 
-# Larisssa Melo - (24/08/2025)
+# Larissa Melo - (24/08/2025)
 
 - Removed the previous Neon database and the test Prisma instance, and created the new Prisma database that will be used as the official one for the project. Environment variables on Vercel were automatically organized accordingly to reflect this change.
+
+# Larissa Melo - (25/08/2025)
+
+- Fixed Google sign-in button redirection: the button no longer redirects to a page with a duplicate login button.
+
+- Corrected NEXTAUTH_URL variable: previously included the Google callback URL, which caused a redirect loop back to the login page.
