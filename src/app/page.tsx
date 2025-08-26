@@ -16,7 +16,7 @@ import { trpc } from '@/lib/trpc-client';
 import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { Video } from '@/lib/types';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -136,7 +136,6 @@ export default function HomePage() {
             <h1 className="text-2xl font-bold text-primary">Repurpose AI</h1>
             <Badge variant="secondary">Beta</Badge>
           </div>
-          
                      <div className="flex items-center space-x-4">
              <Button variant="ghost" asChild>
                <Link href="/subscription">Subscription</Link>
@@ -155,7 +154,16 @@ export default function HomePage() {
                    <Link href="/subscription">Subscription</Link>
                  </DropdownMenuItem>
                  <DropdownMenuItem asChild>
-                   <Link href="/api/auth/signout">Sign out</Link>
+                  <Button variant="destructive"
+                    className="w-full"
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to sign out?")) {
+                        signOut({ callbackUrl: "/" })
+                      }
+                    }}
+                  >
+                    Sign Out
+                  </Button>
                  </DropdownMenuItem>
                </DropdownMenuContent>
              </DropdownMenu>

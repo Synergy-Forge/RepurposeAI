@@ -102,3 +102,10 @@
 - Fixed Google sign-in button redirection: the button no longer redirects to a page with a duplicate login button.
 
 - Corrected NEXTAUTH_URL variable: previously included the Google callback URL, which caused a redirect loop back to the login page.
+
+# Larissa Melo - (26/08/2025)
+### Fixed Sign Out Button Behavior 
+
+- **Issue:** The previous "Sign Out" button was navigating to another page with a different sign out button and then redirecting to the Google login page.  
+- **Fix:** Updated the button route so it now redirects directly to the home page.  
+- **Temporary Alert:** Added a `window.confirm` alert to demonstrate the secondary "Are you sure you want to sign out?" authentication step.
