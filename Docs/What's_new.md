@@ -143,3 +143,8 @@ This setup significantly improves our development process by:
 -   **Enforcing code quality** before code is even committed.
 -   **Improving accessibility** from the ground up.
 -   **Maintaining a clean and consistent codebase**, making it easier for everyone to read and maintain.
+
+# Felipe Abe - (29/08/2025)
+
+#### Implemented Bitwarden as the official password manager #### 
+- **We are adopting Bitwarden as our standard password manager**, to centralize and secure project and team credentials.
