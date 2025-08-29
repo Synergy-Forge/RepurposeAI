@@ -109,3 +109,37 @@
 - **Issue:** The previous "Sign Out" button was navigating to another page with a different sign out button and then redirecting to the Google login page.  
 - **Fix:** Updated the button route so it now redirects directly to the home page.  
 - **Temporary Alert:** Added a `window.confirm` alert to demonstrate the secondary "Are you sure you want to sign out?" authentication step.
+
+# Hatus Batista - (27/08/2025)
+
+### Enhanced Code Quality and Automated Formatting with ESLint, Prettier, and Husky
+
+To improve our development workflow and ensure a high standard of code quality and consistency across the project, we have implemented a comprehensive linting, formatting, and pre-commit hook system. This will help us catch errors early, maintain a consistent code style, and prevent improperly formatted code from being committed to the repository.
+
+Here’s a detailed breakdown of the changes:
+
+#### 1. Upgraded ESLint Configuration
+
+Our ESLint setup has been enhanced with new plugins to enforce best practices:
+
+-   **`eslint-plugin-react-hooks`**: This plugin enforces the Rules of Hooks, helping us avoid common bugs when working with React Hooks.
+-   **`eslint-plugin-jsx-a11y`**: This plugin checks our JSX for common accessibility issues, making our application more inclusive and robust.
+-   **`prettier` & `eslint-config-prettier`**: We've integrated Prettier for automated code formatting. `eslint-config-prettier` disables any ESLint rules that might conflict with Prettier's formatting, allowing both tools to work together seamlessly.
+
+The `.eslintrc.json` file has been updated to reflect these changes.
+
+#### 2. Implemented Pre-commit Hooks with Husky and lint-staged
+
+To automate the process of code quality checks, we've set up pre-commit hooks. This means that before any code is committed, it will be automatically checked and formatted.
+
+-   **Husky**: This tool allows us to easily manage Git hooks. We've configured it to run a script before every commit.
+-   **lint-staged**: This tool runs linters on files that are staged in Git. We've configured it to run `eslint --fix` on all staged JavaScript and TypeScript files (`.js`, `.jsx`, `.ts`, `.tsx`).
+
+**How it works:**
+When a developer runs `git commit`, Husky will trigger `lint-staged`. `lint-staged` will then run `eslint --fix` on only the files that have been changed and are about to be committed. This ensures that all code entering our codebase is automatically formatted and free of linting errors, without needing to lint the entire project on every commit.
+
+This setup significantly improves our development process by:
+-   **Automating code formatting**, saving time and eliminating style debates.
+-   **Enforcing code quality** before code is even committed.
+-   **Improving accessibility** from the ground up.
+-   **Maintaining a clean and consistent codebase**, making it easier for everyone to read and maintain.
