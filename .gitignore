@@ -41,4 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Local test scripts and temporary files
+quick-test.ts
+test-pipeline.ts
+test-transcription.ts
+
 /src/generated/prisma
