@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { SessionProvider } from "@/components/providers/session-provider";
+import { TRPCReactProvider } from "@/components/providers/trpc-provider";
+
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   display: "swap",
@@ -26,7 +29,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${spaceGrotesk.className} antialiased`}>
-        {children}
+        <SessionProvider>
+          <TRPCReactProvider>
+            {children}
+          </TRPCReactProvider>
+        </SessionProvider>
       </body>
     </html>
   );
