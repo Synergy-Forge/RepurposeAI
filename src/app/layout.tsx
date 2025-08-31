@@ -1,41 +1,32 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
-import { TRPCReactProvider } from "@/components/providers/trpc-provider";
-import { SessionProvider } from "@/components/providers/session-provider";
-import { Toaster } from "@/components/ui/sonner";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Repurpose AI - Video Repurposing SaaS",
-  description: "Transform your long-form videos into engaging short-form content with AI",
+  title: "Repurpose - Your content, reborn",
+  description: "Create professional videos with AI-powered editing tools. Transform your content with intelligent editing, templates, and 4K export capabilities.",
+  keywords: ["video editing", "AI", "content creation", "online editor"],
+  authors: [{ name: "Repurpose Team" }],
+  openGraph: {
+    title: "Repurpose - Your content, reborn",
+    description: "Create professional videos with AI-powered editing tools.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
-      >
-        <SessionProvider>
-          <TRPCReactProvider>
-            {children}
-            <Toaster />
-          </TRPCReactProvider>
-        </SessionProvider>
+    <html lang="pt-BR">
+      <body className={`${spaceGrotesk.className} antialiased`}>
+        {children}
       </body>
     </html>
   );
