@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { signIn } from "next-auth/react";
 
 interface FormData {
   name: string;
@@ -31,6 +32,7 @@ export default function RegisterPage() {
 
   const handleGoogleRegister = () => {
     console.log('Google registration attempt');
+    signIn("google");
   };
 
   return (

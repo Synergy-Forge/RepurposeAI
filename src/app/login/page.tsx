@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { signIn } from "next-auth/react";
 
 interface FormData {
   email: string;
@@ -29,6 +30,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = () => {
     console.log('Google login attempt');
+    signIn("google");
   };
 
   return (
