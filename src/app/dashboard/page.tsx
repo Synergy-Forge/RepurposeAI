@@ -35,7 +35,7 @@ export default function HomePage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type.startsWith('video/')) {
+    if (file && file.type.startsWith('/video')) {
       setVideoFile(file);
     } else {
       toast.error('Please select a valid video file');
