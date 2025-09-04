@@ -6,3 +6,4 @@
 4. ✅ Modify price display to show based on selected period
 5. ✅ Update handleSubscribe to use correct priceId
 6. ✅ Test toggle functionality (server started successfully, code compiles without errors)
+trigger
