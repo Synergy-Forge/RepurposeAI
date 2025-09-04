@@ -16,7 +16,7 @@ const Hero: React.FC = () => {
       <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-black to-transparent z-0"></div>
       
       <h1 className="relative z-10 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold px-5 text-shadow-lg">
-        Crie. Inove. Impressione.
+        Create. Share. Inspire.
       </h1>
     </section>
   );

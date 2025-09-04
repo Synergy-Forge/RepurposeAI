@@ -21,23 +21,23 @@ const Features: React.FC = () => {
   const features = [
     {
       icon: <Zap className="w-12 h-12 text-white" />,
-      title: "Edição Inteligente com IA",
-      description: "Nossa IA sugere cortes, transições e até trilhas sonoras para deixar seu vídeo mais dinâmico e profissional."
+      title: "Smart Video Editing with AI",
+      description: "Our advanced AI analyzes your footage to automatically create engaging videos, saving you hours of editing time."
     },
     {
       icon: <Database className="w-12 h-12 text-white" />,
-      title: "Biblioteca de Recursos",
-      description: "Acesse milhões de vídeos, imagens e músicas licenciadas para usar em seus projetos sem preocupação."
+      title: "Resources as a Source",
+      description: "Access millions of licensed videos, images, and music for use in your projects without worry."
     },
     {
       icon: <Grid3X3 className="w-12 h-12 text-white" />,
-      title: "Templates Prontos",
-      description: "Comece rapidamente com templates profissionais para redes sociais, anúncios, vlogs e muito mais."
+      title: "Ready-Made Templates",
+      description: "Quick start templates to help you get started quickly, or customize them to fit your needs."
     },
     {
       icon: <Upload className="w-12 h-12 text-white" />,
-      title: "Exportação em 4K",
-      description: "Exporte seus vídeos em até 4K para garantir a melhor qualidade visual em qualquer plataforma."
+      title: "Export in 4K Quality",
+      description: "Export your videos in 4K quality for professional results."
     }
   ];
 
@@ -47,7 +47,7 @@ const Features: React.FC = () => {
         Ferramentas poderosas, resultados profissionais.
       </h2>
       <p className="text-lg lg:text-xl leading-relaxed max-w-3xl mx-auto mb-16 text-gray-300">
-        Tudo que você precisa para criar vídeos que se destacam, com a ajuda da nossa tecnologia.
+        All the tools you need to create professional videos in minutes, not hours (or even days).
       </p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">

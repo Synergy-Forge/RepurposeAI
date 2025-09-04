@@ -48,10 +48,10 @@ export default function LoginPage() {
       <div className="flex justify-center items-center min-h-screen py-10 px-5">
         <div className="bg-gray-900/85 backdrop-blur-md border border-white/10 rounded-2xl p-10 w-full max-w-md text-center shadow-2xl">
           <h1 className="text-3xl lg:text-4xl font-bold mb-3">
-            Bem-vindo de volta!
+            Welcome back!
           </h1>
           <p className="text-gray-400 mb-8">
-            Faça login para continuar criando.
+            Login to continue creating amazing content.
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -72,7 +72,7 @@ export default function LoginPage() {
             
             <div className="mb-6 text-left">
               <label htmlFor="password" className="block mb-2 text-gray-300 font-medium">
-                Senha
+                Password
               </label>
               <input
                 type="password"
@@ -89,7 +89,7 @@ export default function LoginPage() {
               type="submit"
               className="w-full py-4 border-none rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white mb-5 hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/50"
             >
-              Entrar
+              Login
             </button>
           </form>
 
@@ -110,16 +110,16 @@ export default function LoginPage() {
               <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
               <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.901,35.637,44,28.718,44,20C44,22.659,43.862,21.35,43.611,20.083z"></path>
             </svg>
-            Entrar com Google
+            Sign-in with Google
           </button>
 
           <div className="mt-5 text-sm">
             <Link href="/forgot-password" className="text-purple-500 no-underline transition-colors duration-300 hover:text-pink-500 hover:underline">
-              Esqueceu a senha?
+              Forgot your password?
             </Link>
             <span className="text-gray-400"> • </span>
             <Link href="/register" className="text-purple-500 no-underline transition-colors duration-300 hover:text-pink-500 hover:underline">
-              Criar conta
+              Create an account
             </Link>
           </div>
         </div>

@@ -26,7 +26,7 @@ const ParallaxSection: React.FC = () => (
     <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-black to-transparent z-0"></div>
     
     <h1 className="relative z-10 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold px-5 text-shadow-lg">
-      Simples. Rápido. Online.
+      Simple. Fast. Powerful.
     </h1>
   </section>
 );
@@ -35,18 +35,18 @@ const HowItWorks: React.FC = () => {
   const steps = [
     {
       number: "01",
-      title: "Envie seu material",
-      description: "Arraste e solte seus vídeos, áudios e imagens ou comece com um de nossos templates profissionais."
+      title: "Upload your media",
+      description: "Upload your media to start creating your videos."
     },
     {
       number: "02", 
-      title: "Edite e personalize",
-      description: "Use nossa linha do tempo intuitiva para cortar, adicionar textos, efeitos, transições e muito mais."
+      title: "Edit with ease",
+      description: "Edit your media with ease using our intuitive interface."
     },
     {
       number: "03",
-      title: "Exporte e compartilhe", 
-      description: "Renderize seu vídeo na nuvem em alta velocidade e compartilhe diretamente nas suas redes sociais."
+      title: "Export and share", 
+      description: "Render your videos and share them with your social media and friends."
     }
   ];
 
@@ -56,10 +56,10 @@ const HowItWorks: React.FC = () => {
       
       <section className="py-16 lg:py-24 px-[5%] bg-black text-center">
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-5">
-          Crie seu vídeo em 3 passos.
+          Create your videos in minutes.
         </h2>
         <p className="text-lg lg:text-xl leading-relaxed max-w-3xl mx-auto mb-16 text-gray-300">
-          Desde o upload até a exportação final, nosso processo é desenhado para ser intuitivo e eficiente.
+          From uploading to sharing, our platform makes video creation simple and efficient.
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-6xl mx-auto">

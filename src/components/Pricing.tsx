@@ -80,7 +80,7 @@ const ParallaxSection: React.FC = () => (
     <div className="absolute bottom-0 left-0 w-full h-48 bg-gradient-to-t from-black to-transparent z-0"></div>
     
     <h1 className="relative z-10 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold px-5 text-shadow-lg">
-      Um plano para cada criador.
+      A plan for each creator.
     </h1>
   </section>
 );
@@ -88,45 +88,68 @@ const ParallaxSection: React.FC = () => (
 const Pricing: React.FC = () => {
   const plans = [
     {
-      title: "Grátis",
-      subtitle: "Para quem está começando.",
-      price: "R$0",
-      priceUnit: "/mês",
+      title: "Free",
+      subtitle: "For who is starting now.",
+      price: "$0",
+      priceUnit: "/month",
       features: [
-        { text: "Exportação em 720p" },
-        { text: "Até 3 projetos" },
-        { text: "Recursos básicos da biblioteca" }
+        { text: "Export in 720p" },
+        { text: " 15 min of video" },
+        { text: "Standard support" },
+        { text: "Watermark included" }
       ],
-      buttonText: "Começar Agora",
+      buttonText: "Start Free",
       buttonHref: "/register"
     },
     {
-      title: "Pro",
-      subtitle: "Para criadores que buscam mais poder.",
-      price: "R$49",
-      priceUnit: "/mês",
+      title: "Starter",
+      subtitle: "For beginners who wants more power.",
+      price: "$9.99",
+      priceUnit: "/month",
       features: [
-        { text: "Exportação em 4K" },
-        { text: "Projetos ilimitados" },
-        { text: "Acesso completo à biblioteca" },
-        { text: "Remoção da marca d'água" }
+        { text: "Export videos in Full HD 1080p" },
+        { text: " 120 min of video" },
+        { text: "Access to all features" },
+        { text: "Standard support" },
+        { text: "No watermark" }
       ],
-      buttonText: "Escolher Plano Pro",
+      buttonText: "Choose Starter",
       buttonHref: "/register",
       featured: true
     },
     {
-      title: "Equipes",
-      subtitle: "Para colaboração profissional.",
-      price: "Contato",
+      title: "Creator",
+      subtitle: "For premium creators.",
+      price: "$24.99",
       features: [
-        { text: "Tudo do plano Pro" },
-        { text: "Múltiplos usuários" },
-        { text: "Recursos de colaboração" },
-        { text: "Suporte prioritário" }
+        { text: "Export videos in Full HD 1080p" },
+        { text: " 400 min of video" },
+        { text: "Access to all features" },
+        { text: "Subtitles support" },
+        { text: "AI support for context" },
+        { text: "Branding template" },
+        { text: "Priority processing" },
+        { text: "Custom branding" },
       ],
-      buttonText: "Fale Conosco",
+      buttonText: "Choose Creator",
       buttonHref: "/contact"
+    },
+    {
+      title: "Producer",
+      subtitle: "For Podcasters and agencies.",
+      price: "$69.99",
+      features: [
+        { text: "Export videos in Full HD 1080p" },
+        { text: " 1200 min of video" },
+        { text: "Access to all features" },
+        { text: "Subtitles support" },
+        { text: "AI support for context" },
+        { text: "Branding template" },
+        { text: "Priority support via chat" },
+        { text: "No queue for processing videos" }
+      ],
+      buttonText: "Choose Creator",
+      buttonHref: "/register"
     }
   ];
 
@@ -136,10 +159,10 @@ const Pricing: React.FC = () => {
       
       <section className="py-16 lg:py-24 px-[5%] bg-black text-center">
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-5">
-          Encontre o plano perfeito.
+          Find your perfect plan.
         </h2>
         <p className="text-lg lg:text-xl leading-relaxed max-w-3xl mx-auto mb-16 text-gray-300">
-          Comece de graça e evolua conforme sua criatividade cresce. Sem compromissos.
+          Start creating with our free plan, or choose one of our premium plans for more features and flexibility.
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">

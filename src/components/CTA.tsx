@@ -12,13 +12,13 @@ const CTA: React.FC = () => (
     
     <div className="relative z-10">
       <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-8 px-5 text-shadow-lg">
-        Pronto para criar vídeos que impressionam?
+        Ready to create something awesome?
       </h1>
       <Link 
         href="/register"
         className="inline-block bg-white text-black font-medium text-lg lg:text-xl px-8 py-4 rounded-lg transition-all duration-300 hover:bg-gray-200 no-underline"
       >
-        Comece a criar de graça
+        Start Your Free Trial and Create Now
       </Link>
     </div>
   </section>
@@ -27,7 +27,7 @@ const CTA: React.FC = () => (
 const Footer: React.FC = () => (
   <footer className="bg-black py-10 px-[5%] text-center border-t border-white/10">
     <p className="text-gray-400">
-      &copy; 2025 Repurpose. Todos os direitos reservados.
+      &copy; 2025 Repurpose AI. All rights reserved.
     </p>
   </footer>
 );
