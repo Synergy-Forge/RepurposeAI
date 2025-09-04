@@ -62,7 +62,7 @@ export default function SubscriptionPage() {
         'Watermark included',
         'Basic support',
       ],
-      priceId: null,
+      priceId: 'prod_SxOsuRR6DuxTer', // Stripe price ID
       popular: false,
     },
     {
@@ -76,7 +76,7 @@ export default function SubscriptionPage() {
         'Standard support',
         'No watermark',
       ],
-      priceId: 'price_starter_monthly', // Replace with actual Stripe price ID
+      priceId: 'prod_Sv9zE3Lt3Dza4U', // Stripe price ID
       popular: false,
     },
     {
@@ -90,13 +90,30 @@ export default function SubscriptionPage() {
         'Subtitles support',
         'AI support for context',
         'Branding template',
-        'Priority processing',
-        '24/7 support',
+        'Priority support',
+        'Custom branding',
+      ],
+      priceId: 'prod_SzjVo4rdm3LBx0', // Stripe price ID
+      popular: true,
+    },
+    {
+      name: 'Producer',
+      price: '$69.99',
+      period: '/month',
+      features: [
+        'Export videos in Full HD 1080p',
+        '1200 minutes of video',
+        'Access to all features',
+        'Subtitles support',
+        'AI support for context',
+        'Branding template',
+        'No queue for processing videos',
+        'Priority support via chat',
         'Custom branding',
         'Analytics dashboard',
         'Team collaboration',
       ],
-      priceId: 'price_pro_monthly', // Replace with actual Stripe price ID
+      priceId: 'prod_Szjf5hO6PQoUja', // Stripe price ID
       popular: true,
     },
   ];

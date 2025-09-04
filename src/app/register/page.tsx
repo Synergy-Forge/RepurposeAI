@@ -113,7 +113,7 @@ export default function RegisterPage() {
           {/* Divider */}
           <div className="flex items-center text-center text-gray-500 my-6">
             <div className="flex-1 border-b border-gray-600"></div>
-            <span className="px-2">ou</span>
+            <span className="px-2">or</span>
             <div className="flex-1 border-b border-gray-600"></div>
           </div>
 
