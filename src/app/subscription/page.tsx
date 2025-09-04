@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,7 @@ import { toast } from 'sonner';
 
 export default function SubscriptionPage() {
   const { data: session } = useSession();
+  const [billingPeriod, setBillingPeriod] = useState<'month' | 'year'>('month');
 
   const { data: subscriptionStatus } = trpc.user.getSubscriptionStatus.useQuery(undefined, {
     enabled: !!session?.user,
@@ -53,8 +55,8 @@ export default function SubscriptionPage() {
   const plans = [
     {
       name: 'Free',
-      price: '$0',
-      period: 'No card required',
+      price: { month: '$0', year: '$0' },
+      period: { month: 'No card required', year: 'No card required' },
       features: [
         '1 video per month',
         'Export in 720p',
@@ -62,13 +64,13 @@ export default function SubscriptionPage() {
         'Watermark included',
         'Basic support',
       ],
-      priceId: 'prod_SxOsuRR6DuxTer', // Stripe price ID
+      priceId: { month: 'prod_SxOsuRR6DuxTer', year: 'prod_SxOsuRR6DuxTer' }, // Stripe price IDs (same for free)
       popular: false,
     },
     {
       name: 'Starter',
-      price: '$9.99',
-      period: '/month',
+      price: { month: '$9.99', year: '$98.99' }, // 17% discount approx for yearly
+      period: { month: '/month', year: '/year' },
       features: [
         'Export videos in Full HD 1080p',
         '120 minutes of video',
@@ -76,13 +78,13 @@ export default function SubscriptionPage() {
         'Standard support',
         'No watermark',
       ],
-      priceId: 'prod_Sv9zE3Lt3Dza4U', // Stripe price ID
+      priceId: { month: 'prod_Sv9zE3Lt3Dza4U', year: 'prod_YEARLY_Starter' }, // Replace with actual yearly priceId
       popular: false,
     },
     {
       name: 'Creator',
-      price: '$24.99',
-      period: '/month',
+      price: { month: '$24.99', year: '$247.41' }, // 17% discount approx for yearly
+      period: { month: '/month', year: '/year' },
       features: [
         'Export videos in Full HD 1080p',
         '400 minutes of video',
@@ -93,13 +95,13 @@ export default function SubscriptionPage() {
         'Priority support',
         'Custom branding',
       ],
-      priceId: 'prod_SzjVo4rdm3LBx0', // Stripe price ID
+      priceId: { month: 'prod_SzjVo4rdm3LBx0', year: 'prod_YEARLY_Creator' }, // Replace with actual yearly priceId
       popular: true,
     },
     {
       name: 'Producer',
-      price: '$69.99',
-      period: '/month',
+      price: { month: '$69.99', year: '$695.41' }, // 17% discount approx for yearly
+      period: { month: '/month', year: '/year' },
       features: [
         'Export videos in Full HD 1080p',
         '1200 minutes of video',
@@ -113,7 +115,7 @@ export default function SubscriptionPage() {
         'Analytics dashboard',
         'Team collaboration',
       ],
-      priceId: 'prod_Szjf5hO6PQoUja', // Stripe price ID
+      priceId: { month: 'prod_Szjf5hO6PQoUja', year: 'prod_YEARLY_Producer' }, // Replace with actual yearly priceId
       popular: true,
     },
   ];
@@ -151,6 +153,22 @@ export default function SubscriptionPage() {
           </p>
         </div>
 
+        {/* Billing Period Toggle */}
+        <div className="flex justify-center mb-8 space-x-4">
+          <Button
+            variant={billingPeriod === 'month' ? 'default' : 'outline'}
+            onClick={() => setBillingPeriod('month')}
+          >
+            Monthly
+          </Button>
+          <Button
+            variant={billingPeriod === 'year' ? 'default' : 'outline'}
+            onClick={() => setBillingPeriod('year')}
+          >
+            Yearly
+          </Button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {plans.map((plan) => (
             <Card
@@ -168,9 +186,9 @@ export default function SubscriptionPage() {
               <CardHeader className="text-center">
                 <CardTitle className="text-xl">{plan.name}</CardTitle>
                 <div className="flex items-baseline justify-center space-x-1">
-                  <span className="text-3xl font-bold">{plan.price}</span>
-                  {plan.period && (
-                    <span className="text-muted-foreground">{plan.period}</span>
+                  <span className="text-3xl font-bold">{plan.price[billingPeriod]}</span>
+                  {plan.period[billingPeriod] && (
+                    <span className="text-muted-foreground">{plan.period[billingPeriod]}</span>
                   )}
                 </div>
               </CardHeader>
@@ -198,10 +216,10 @@ export default function SubscriptionPage() {
                 </ul>
 
                 <div className="pt-4">
-                  {plan.priceId ? (
+                  {plan.priceId[billingPeriod] ? (
                     <Button
                       className="w-full"
-                      onClick={() => handleSubscribe(plan.priceId!)}
+                      onClick={() => handleSubscribe(plan.priceId[billingPeriod]!)}
                       disabled={createCheckoutSessionMutation.isPending}
                     >
                       {createCheckoutSessionMutation.isPending ? 'Loading...' : 'Subscribe'}
