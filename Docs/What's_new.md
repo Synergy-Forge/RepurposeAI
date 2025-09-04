@@ -148,3 +148,8 @@ This setup significantly improves our development process by:
 
 #### Implemented Bitwarden as the official password manager #### 
 - **We are adopting Bitwarden as our standard password manager**, to centralize and secure project and team credentials.
+
+# Larissa Melo - (31/08/2025)
+
+### Fixed Google login and registration
+- Fixed the issue where Google login and Google registration buttons did not work due to missing NextAuth and signIn.

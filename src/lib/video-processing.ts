@@ -5,9 +5,9 @@ import { tmpdir } from 'os';
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
 
-const openai = new OpenAI({
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+}) : null;
 
 export interface KeyMoment {
   title: string;
@@ -63,6 +63,9 @@ export async function extractAudioFromVideo(
 }
 
 export async function transcribeAudio(audioPath: string): Promise<string> {
+  if (!openai) {
+    throw new Error('OpenAI API key not configured');
+  }
   try {
     const transcription = await openai.audio.transcriptions.create({
       file: await createFileFromPath(audioPath, 'audio.mp3', 'audio/mp3'),
@@ -79,6 +82,9 @@ export async function transcribeAudio(audioPath: string): Promise<string> {
 }
 
 export async function transcribeVideoWithCaptions(videoPath: string): Promise<{ text: string, captions: string }> {
+  if (!openai) {
+    throw new Error('OpenAI API key not configured');
+  }
   try {
     const file = await createFileFromPath(videoPath, 'video.mp4', 'video/mp4');
 
@@ -120,6 +126,9 @@ async function createFileFromPath(
 export async function generateKeyMoments(
   transcript: string
 ): Promise<KeyMoment[]> {
+  if (!openai) {
+    throw new Error('OpenAI API key not configured');
+  }
   const prompt = `
     Analyze this video transcript and identify 5-8 key moments that would make engaging short-form content.
     For each moment, provide:
@@ -166,6 +175,9 @@ export async function generateCaptionsForClip(
   description: string,
   transcript: string
 ): Promise<string> {
+  if (!openai) {
+    throw new Error('OpenAI API key not configured');
+  }
   const prompt = `
     Create engaging captions for a short video clip.
 

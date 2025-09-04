@@ -47,7 +47,7 @@ export default function VideoDetailsPage() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/">Go Back</Link>
+              <Link href="/dashboard">Go Back</Link>
             </Button>
           </CardContent>
         </Card>
@@ -62,7 +62,7 @@ export default function VideoDetailsPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button variant="ghost" asChild>
-              <Link href="/">← Back</Link>
+              <Link href="/dashboard">← Back</Link>
             </Button>
             <h1 className="text-2xl font-bold">{video.title}</h1>
             <Badge variant={video.status === 'completed' ? 'default' : 'secondary'}>
