@@ -16,7 +16,6 @@
 
 - Successfully integrated OpenAI Whisper API for audio transcription
 - Implementation details:
-
   1. Updated OpenAI package to version 5.15.0
   2. Created new transcription service (`src/lib/transcription.ts`):
 
@@ -92,7 +91,6 @@
 - **Problem:** After a successful login, the application would fail with a `Callback` error because the production database schema was not synchronized with the Prisma schema.
 - **Solution:** Implemented an automated database migration workflow. The `package.json` build script was updated to `prisma generate && prisma migrate deploy && next build`. This forces Vercel to apply any new migrations from the committed `prisma/migrations` folder to the production database on every deploy, ensuring the database schema is always in sync with the application code.
 
-
 # Larissa Melo - (24/08/2025)
 
 - Removed the previous Neon database and the test Prisma instance, and created the new Prisma database that will be used as the official one for the project. Environment variables on Vercel were automatically organized accordingly to reflect this change.
@@ -104,10 +102,11 @@
 - Corrected NEXTAUTH_URL variable: previously included the Google callback URL, which caused a redirect loop back to the login page.
 
 # Larissa Melo - (26/08/2025)
-### Fixed Sign Out Button Behavior 
 
-- **Issue:** The previous "Sign Out" button was navigating to another page with a different sign out button and then redirecting to the Google login page.  
-- **Fix:** Updated the button route so it now redirects directly to the home page.  
+### Fixed Sign Out Button Behavior
+
+- **Issue:** The previous "Sign Out" button was navigating to another page with a different sign out button and then redirecting to the Google login page.
+- **Fix:** Updated the button route so it now redirects directly to the home page.
 - **Temporary Alert:** Added a `window.confirm` alert to demonstrate the secondary "Are you sure you want to sign out?" authentication step.
 
 # Hatus Batista - (27/08/2025)
@@ -122,9 +121,9 @@ Here’s a detailed breakdown of the changes:
 
 Our ESLint setup has been enhanced with new plugins to enforce best practices:
 
--   **`eslint-plugin-react-hooks`**: This plugin enforces the Rules of Hooks, helping us avoid common bugs when working with React Hooks.
--   **`eslint-plugin-jsx-a11y`**: This plugin checks our JSX for common accessibility issues, making our application more inclusive and robust.
--   **`prettier` & `eslint-config-prettier`**: We've integrated Prettier for automated code formatting. `eslint-config-prettier` disables any ESLint rules that might conflict with Prettier's formatting, allowing both tools to work together seamlessly.
+- **`eslint-plugin-react-hooks`**: This plugin enforces the Rules of Hooks, helping us avoid common bugs when working with React Hooks.
+- **`eslint-plugin-jsx-a11y`**: This plugin checks our JSX for common accessibility issues, making our application more inclusive and robust.
+- **`prettier` & `eslint-config-prettier`**: We've integrated Prettier for automated code formatting. `eslint-config-prettier` disables any ESLint rules that might conflict with Prettier's formatting, allowing both tools to work together seamlessly.
 
 The `.eslintrc.json` file has been updated to reflect these changes.
 
@@ -132,24 +131,51 @@ The `.eslintrc.json` file has been updated to reflect these changes.
 
 To automate the process of code quality checks, we've set up pre-commit hooks. This means that before any code is committed, it will be automatically checked and formatted.
 
--   **Husky**: This tool allows us to easily manage Git hooks. We've configured it to run a script before every commit.
--   **lint-staged**: This tool runs linters on files that are staged in Git. We've configured it to run `eslint --fix` on all staged JavaScript and TypeScript files (`.js`, `.jsx`, `.ts`, `.tsx`).
+- **Husky**: This tool allows us to easily manage Git hooks. We've configured it to run a script before every commit.
+- **lint-staged**: This tool runs linters on files that are staged in Git. We've configured it to run `eslint --fix` on all staged JavaScript and TypeScript files (`.js`, `.jsx`, `.ts`, `.tsx`).
 
 **How it works:**
 When a developer runs `git commit`, Husky will trigger `lint-staged`. `lint-staged` will then run `eslint --fix` on only the files that have been changed and are about to be committed. This ensures that all code entering our codebase is automatically formatted and free of linting errors, without needing to lint the entire project on every commit.
 
 This setup significantly improves our development process by:
--   **Automating code formatting**, saving time and eliminating style debates.
--   **Enforcing code quality** before code is even committed.
--   **Improving accessibility** from the ground up.
--   **Maintaining a clean and consistent codebase**, making it easier for everyone to read and maintain.
+
+- **Automating code formatting**, saving time and eliminating style debates.
+- **Enforcing code quality** before code is even committed.
+- **Improving accessibility** from the ground up.
+- **Maintaining a clean and consistent codebase**, making it easier for everyone to read and maintain.
 
 # Felipe Abe - (29/08/2025)
 
-#### Implemented Bitwarden as the official password manager #### 
+#### Implemented Bitwarden as the official password manager
+
 - **We are adopting Bitwarden as our standard password manager**, to centralize and secure project and team credentials.
+
+# Felipe Abe - (29/08/2025)
+
+#### Made Processing Engine is smarter & more powerful
+
+- **This update is focused on making your clip generation faster, more reliable, and more intelligent.**
+
+### What's New & Improved
+
+- **A More Intelligent Clipping Engine**
+  Our core AI has been upgraded. It's now better at analyzing long-form content to identify high-potential moments, ensuring the clips are more relevant and engaging than before.
+
+### Under the Hood: Reliability & Security
+
+- **More Reliable Processing:** We've rebuilt our processing pipeline from the ground up to be more resilient. It now intelligently handles different video formats, pre-emptively checks for issues (like missing audio), and provides clearer feedback if a problem occurs.
+- **Enhanced Security:** We've implemented additional safeguards to ensure your content is processed with the utmost protection.
 
 # Larissa Melo - (31/08/2025)
 
 ### Fixed Google login and registration
-- Fixed the issue where Google login and Google registration buttons did not work due to missing NextAuth and signIn.
+
+- # Fixed the issue where Google login and Google registration buttons did not work due to missing NextAuth and signIn.
+
+# Felipe Abe- (03/09/2025)
+
+### After a deep analysis of the market and our core brand value of "Simplicity Intelligent," I've established our go-to-market pricing strategy.
+
+- Decided to move away from the confusing "credits" model used by competitors and adopted a transparent "Minutes Processed" system. This is a key differentiator and aligns with our user-centric approach.
+- Defined four clear user tiers (Free, Starter, Creator, Producer), each with a distinct value proposition to create a clear upgrade path.
+- Also conducted a full financial analysis, calculating our variable/fixed costs, margins, and break-even points to ensure this model is sustainable for the business from day one.
