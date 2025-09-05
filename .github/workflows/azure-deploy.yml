@@ -42,6 +42,10 @@ jobs:
         STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
         NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
 
+    - name: Stop web app before deployment
+      run: |
+        az webapp stop --name repurposeai-webapp --resource-group repurposeai-rg || echo "Web app already stopped or not found"
+
     - name: Build and prepare deployment package
       run: |
         npm run build
