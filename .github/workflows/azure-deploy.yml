@@ -45,6 +45,7 @@ jobs:
     - name: Stop web app before deployment
       run: |
         az webapp stop --name repurposeai-webapp --resource-group repurposeai-rg || echo "Web app already stopped or not found"
+        sleep 10
 
     - name: Build and prepare deployment package
       run: |
@@ -79,3 +80,7 @@ jobs:
         NODE_ENV: production
         WEBSITE_NODE_DEFAULT_VERSION: '20.19.4'
         WEBSITE_NPM_DEFAULT_VERSION: '10.8.2'
+
+    - name: Start web app after deployment
+      run: |
+        az webapp start --name repurposeai-webapp --resource-group repurposeai-rg || echo "Failed to start web app"
