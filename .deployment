@@ -1,2 +1,2 @@
 [config]
-command = bash -c "npm install --production=false && npm run build"
+command = bash -c "npm install --production=false && npx prisma generate && npm run build"
