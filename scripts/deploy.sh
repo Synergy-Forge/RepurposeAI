@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Install dependencies
-npm ci
+npm ci --production=false
 
 # Generate Prisma client
 npx prisma generate

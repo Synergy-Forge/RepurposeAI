@@ -25,7 +25,8 @@
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('siteName'))]",
         "siteConfig": {
-          "linuxFxVersion": "NODE|20-lts"
+          "linuxFxVersion": "NODE|20-lts",
+          "appCommandLine": "npm run start"
         }
       },
       "dependsOn": [
