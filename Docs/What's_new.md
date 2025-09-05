@@ -9,6 +9,7 @@ After careful consideration of our growing user base in Europe and Brazil, we ha
 ## Migration Process & Infrastructure Setup
 
 ### 1. Azure Resource Provisioning
+
 - **Resource Group**: Created `RepurposeAI-rg` in North Europe region for optimal performance across Europe and Brazil
 - **Database**: Azure Database for PostgreSQL Flexible Server (`repurposeai-db`)
   - PostgreSQL version 15
@@ -20,12 +21,14 @@ After careful consideration of our growing user base in Europe and Brazil, we ha
   - Configured for Next.js deployment
 
 ### 2. Database Migration & Configuration
+
 - **Connection String**: `postgresql://repurposeadmin:AzureSecurePass123@repurposeai-db.postgres.database.azure.com:5432/postgres?sslmode=require`
 - **Firewall Rules**: Added GitHub Actions IP ranges (20.87.225.192-20.87.225.207) for CI/CD pipeline access
 - **Environment Variables**: Configured `DATABASE_URL` in both GitHub Actions and Azure App Service
 - **Prisma Integration**: Maintained existing Prisma schema with Azure PostgreSQL compatibility
 
 ### 3. CI/CD Pipeline Implementation
+
 - **GitHub Actions Workflow**: Created `.github/workflows/azure-deploy.yml`
   - Automated build and deployment process
   - Environment variable management for secrets
@@ -35,12 +38,14 @@ After careful consideration of our growing user base in Europe and Brazil, we ha
 - **Deployment File**: Added `.deployment` file for proper Next.js static generation
 
 ### 4. Security & Access Management
+
 - **Service Principal**: Configured Azure service principal for GitHub Actions authentication
 - **Secrets Management**: Set up `AZURE_CREDENTIALS` and `DATABASE_URL` in GitHub repository secrets
 - **Firewall Configuration**: Implemented secure database access with IP whitelisting
 - **Environment Variables**: Properly configured all required secrets (OpenAI, Stripe, NextAuth, etc.)
 
 ### 5. Application Architecture Considerations
+
 - **Multi-Region Optimization**: Positioned in North Europe for optimal performance across target markets
 - **Scalability**: Azure App Service provides auto-scaling capabilities for future growth
 - **Cost Optimization**: Moved from Vercel's usage-based pricing to Azure's predictable pricing model
@@ -49,16 +54,19 @@ After careful consideration of our growing user base in Europe and Brazil, we ha
 ## Technical Challenges Resolved
 
 ### Database Authentication Issues
+
 - **Problem**: Initial deployment failed due to PostgreSQL authentication errors
 - **Solution**: Reset database admin password and updated all connection strings
 - **Firewall Configuration**: Added GitHub Actions IP ranges to database firewall rules
 
 ### Build Process Optimization
+
 - **Problem**: Next.js deployment configuration for Azure App Service
 - **Solution**: Created custom `.deployment` file and updated build scripts
 - **Result**: Successful automated deployment pipeline
 
 ### Environment Variable Management
+
 - **Problem**: Coordinating secrets between GitHub Actions and Azure App Service
 - **Solution**: Implemented dual configuration approach for maximum compatibility
 - **Security**: Maintained secure credential management throughout migration
@@ -66,16 +74,19 @@ After careful consideration of our growing user base in Europe and Brazil, we ha
 ## Benefits Achieved
 
 ### Performance Improvements
+
 - **Geographic Optimization**: North Europe region provides better latency for European and Brazilian users
 - **Azure CDN**: Built-in content delivery network capabilities
 - **Scalable Architecture**: Auto-scaling capabilities for handling traffic spikes
 
 ### Cost Optimization
+
 - **Predictable Pricing**: Moved from Vercel's variable pricing to Azure's fixed-cost model
 - **Resource Efficiency**: Right-sized Azure resources for current workload
 - **Future-Proofing**: Infrastructure ready for growth without immediate cost increases
 
 ### Operational Excellence
+
 - **Automated Deployments**: GitHub Actions provides reliable CI/CD pipeline
 - **Monitoring & Logging**: Azure Application Insights integration ready
 - **Backup & Recovery**: Automated database backups with Azure's built-in solutions
@@ -83,17 +94,20 @@ After careful consideration of our growing user base in Europe and Brazil, we ha
 ## Next Steps & Future Enhancements
 
 ### Immediate Priorities
+
 - **Testing**: Complete end-to-end testing of deployed application
 - **Monitoring**: Set up Azure Application Insights for performance monitoring
 - **Optimization**: Fine-tune Azure resource allocation based on usage patterns
 
 ### Future Infrastructure Improvements
+
 - **Azure Front Door**: Implement global CDN for multi-region optimization
 - **Azure Key Vault**: Enhanced secrets management
 - **Azure Monitor**: Comprehensive application and infrastructure monitoring
 - **Azure Backup**: Automated backup solutions for database and application
 
 ### Migration Learnings
+
 - **Database Migration**: Successfully transitioned from Vercel-hosted to Azure-managed PostgreSQL
 - **CI/CD Best Practices**: Established robust deployment pipeline with proper security
 - **Multi-Cloud Strategy**: Gained experience in cloud migration and optimization
@@ -206,6 +220,10 @@ This migration represents a significant milestone in RepurposeAI's infrastructur
 
 ### Fixed Sign Out Button Behavior
 
+### Fixed Sign Out Button Behavior
+
+- **Issue:** The previous "Sign Out" button was navigating to another page with a different sign out button and then redirecting to the Google login page.
+- **Fix:** Updated the button route so it now redirects directly to the home page.
 - **Issue:** The previous "Sign Out" button was navigating to another page with a different sign out button and then redirecting to the Google login page.
 - **Fix:** Updated the button route so it now redirects directly to the home page.
 - **Temporary Alert:** Added a `window.confirm` alert to demonstrate the secondary "Are you sure you want to sign out?" authentication step.
@@ -225,6 +243,9 @@ Our ESLint setup has been enhanced with new plugins to enforce best practices:
 - **`eslint-plugin-react-hooks`**: This plugin enforces the Rules of Hooks, helping us avoid common bugs when working with React Hooks.
 - **`eslint-plugin-jsx-a11y`**: This plugin checks our JSX for common accessibility issues, making our application more inclusive and robust.
 - **`prettier` & `eslint-config-prettier`**: We've integrated Prettier for automated code formatting. `eslint-config-prettier` disables any ESLint rules that might conflict with Prettier's formatting, allowing both tools to work together seamlessly.
+- **`eslint-plugin-react-hooks`**: This plugin enforces the Rules of Hooks, helping us avoid common bugs when working with React Hooks.
+- **`eslint-plugin-jsx-a11y`**: This plugin checks our JSX for common accessibility issues, making our application more inclusive and robust.
+- **`prettier` & `eslint-config-prettier`**: We've integrated Prettier for automated code formatting. `eslint-config-prettier` disables any ESLint rules that might conflict with Prettier's formatting, allowing both tools to work together seamlessly.
 
 The `.eslintrc.json` file has been updated to reflect these changes.
 
@@ -232,6 +253,8 @@ The `.eslintrc.json` file has been updated to reflect these changes.
 
 To automate the process of code quality checks, we've set up pre-commit hooks. This means that before any code is committed, it will be automatically checked and formatted.
 
+- **Husky**: This tool allows us to easily manage Git hooks. We've configured it to run a script before every commit.
+- **lint-staged**: This tool runs linters on files that are staged in Git. We've configured it to run `eslint --fix` on all staged JavaScript and TypeScript files (`.js`, `.jsx`, `.ts`, `.tsx`).
 - **Husky**: This tool allows us to easily manage Git hooks. We've configured it to run a script before every commit.
 - **lint-staged**: This tool runs linters on files that are staged in Git. We've configured it to run `eslint --fix` on all staged JavaScript and TypeScript files (`.js`, `.jsx`, `.ts`, `.tsx`).
 
@@ -245,7 +268,14 @@ This setup significantly improves our development process by:
 - **Improving accessibility** from the ground up.
 - **Maintaining a clean and consistent codebase**, making it easier for everyone to read and maintain.
 
+- **Automating code formatting**, saving time and eliminating style debates.
+- **Enforcing code quality** before code is even committed.
+- **Improving accessibility** from the ground up.
+- **Maintaining a clean and consistent codebase**, making it easier for everyone to read and maintain.
+
 # Felipe Abe - (29/08/2025)
+
+#### Implemented Bitwarden as the official password manager
 
 #### Implemented Bitwarden as the official password manager
 

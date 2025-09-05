@@ -1,13 +1,24 @@
+// This file contains all the logic for processing a video:
+// extracting audio, transcribing it, analyzing with AI to find the best
+// moments, and finally, clipping the original video at those moments.
+
 import { spawn } from 'child_process';
-import { unlink, readFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
+import { getTranscription } from '../lib/transcription'; // Caminho relativo corrigido
+import { Transcription } from 'openai/resources/audio/transcriptions';
 
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('OPENAI_API_KEY environment variable is required');
+}
+
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-}) : null;
+});
+
+// These interfaces define the "shape" of the data used throughout this file.
 
 export interface KeyMoment {
   title: string;
@@ -28,182 +39,159 @@ export interface ProcessedClip {
   hashtags: string;
 }
 
-export async function extractAudioFromVideo(
-  videoPath: string
-): Promise<string> {
-  const audioPath = join(tmpdir(), `${randomUUID()}.mp3`);
+// Helper types for the verbose transcription response
+interface TranscriptionSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+interface VerboseTranscription extends Transcription {
+  segments: TranscriptionSegment[];
+}
 
+// A security helper function to sanitize caption text
+// before passing it to FFmpeg, preventing special characters from breaking the command.
+function sanitizeTextForFFmpeg(text: string): string {
+  if (!text) return '';
+  const replacements: Array<[string, string]> = [
+    ["'", "'"],
+    ["\\", "\\\\"],
+    ["$", "\\$"], 
+    [":", "\\:"],
+    ['"', '\\"']
+  ];
+  
+  let result = text;
+  for (const [search, replace] of replacements) {
+    result = result.split(search).join(replace);
+  }
+  return result;
+}
+
+// Uses ffprobe (which comes with FFmpeg) to safely check
+// if a video contains an audio stream before attempting to process it.
+function hasAudioStream(videoPath: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const ffprobe = spawn('ffprobe', [
+      '-v', 'error', '-select_streams', 'a:0',
+      '-show_entries', 'stream=codec_type', '-of', 'default=noprint_wrappers=1:nokey=1',
+      videoPath
+    ]);
+    let output = '';
+    ffprobe.stdout.on('data', (data) => { output += data.toString(); });
+    ffprobe.on('close', () => resolve(output.trim().length > 0));
+    ffprobe.on('error', () => resolve(false));
+  });
+}
+
+// A simple helper to return the correct scale arguments
+// for FFmpeg based on the desired aspect ratio (e.g., 9:16 for Reels/Shorts).
+function getScaleForAspectRatio(aspectRatio: string): string {
+  switch (aspectRatio) {
+    case '9:16': return '1080:1920';
+    case '1:1': return '1080:1080';
+    case '16:9': return '1920:1080';
+    default: return '1920:1080';
+  }
+}
+
+// The first step of the pipeline. It takes a video path, verifies
+// if it has audio, and if so, uses FFmpeg to extract and save that audio as an MP3.
+export async function extractAudioFromVideo(videoPath: string): Promise<string> {
+  const hasAudio = await hasAudioStream(videoPath);
+  if (!hasAudio) {
+    throw new Error('The uploaded video does not contain an audio stream.');
+  }
+
+  const audioPath = join(tmpdir(), `${randomUUID()}.mp3`);
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn('ffmpeg', [
-      '-i',
-      videoPath,
-      '-vn',
-      '-acodec',
-      'mp3',
-      '-ab',
-      '128k',
-      '-ar',
-      '44100',
-      '-y',
-      audioPath,
+      '-i', videoPath, '-vn', '-acodec', 'mp3',
+      '-ab', '128k', '-ar', '44100', '-y', audioPath,
     ]);
-
+    let errorOutput = '';
+    ffmpeg.stderr.on('data', (data) => { errorOutput += data.toString(); });
     ffmpeg.on('close', (code) => {
       if (code === 0) {
         resolve(audioPath);
       } else {
-        reject(new Error(`FFmpeg process exited with code ${code}`));
+        reject(new Error(`FFmpeg process exited with code ${code}. Stderr: ${errorOutput}`));
       }
     });
-
-    ffmpeg.on('error', (err) => {
-      reject(err);
-    });
+    ffmpeg.on('error', (err) => reject(err));
   });
 }
 
-export async function transcribeAudio(audioPath: string): Promise<string> {
-  if (!openai) {
-    throw new Error('OpenAI API key not configured');
-  }
-  try {
-    const transcription = await openai.audio.transcriptions.create({
-      file: await createFileFromPath(audioPath, 'audio.mp3', 'audio/mp3'),
-      model: 'whisper-1',
-      response_format: 'text',
-    });
+// The AI "brain" of the system. It receives the transcript with timestamps,
+// sends it to GPT-4o, and asks it to identify key moments, returning a structured JSON.
+export async function generateKeyMoments(transcript: VerboseTranscription): Promise<KeyMoment[]> {
+    const transcriptWithTimestamps = transcript.segments.map(seg => `[${seg.start.toFixed(2)}s - ${seg.end.toFixed(2)}s] ${seg.text}`).join('\n');
+    const prompt = `
+    Analyze the following video transcript, which includes timestamps for each segment. Your task is to identify 5 to 8 key moments suitable for short-form content.
+    For each moment, you must provide a catchy title, a brief description, the precise startTime and endTime in seconds based on the provided segments, and relevant hashtags.
+    You MUST return your response as a single, valid JSON object with a root key named "clips" which contains an array of objects.
+    
+    Example format:
+    {
+      "clips": [
+        {
+          "title": "Example Title",
+          "description": "Example description of the moment.",
+          "startTime": 45.12,
+          "endTime": 65.34,
+          "hashtags": ["#example", "#ai"]
+        }
+      ]
+    }
 
-    await unlink(audioPath);
-    return transcription;
-  } catch (error) {
-    console.error('Error transcribing audio:', error);
-    throw error;
-  }
-}
-
-export async function transcribeVideoWithCaptions(videoPath: string): Promise<{ text: string, captions: string }> {
-  if (!openai) {
-    throw new Error('OpenAI API key not configured');
-  }
-  try {
-    const file = await createFileFromPath(videoPath, 'video.mp4', 'video/mp4');
-
-    // Get text transcription
-    const textTranscription = await openai.audio.transcriptions.create({
-      file,
-      model: 'whisper-1',
-      response_format: 'text',
-    });
-
-    // Get VTT captions
-    const vttTranscription = await openai.audio.transcriptions.create({
-      file,
-      model: 'whisper-1',
-      response_format: 'vtt',
-    });
-
-    return {
-      text: textTranscription,
-      captions: vttTranscription
-    };
-  } catch (error) {
-    console.error('Error transcribing video:', error);
-    throw error;
-  }
-}
-
-async function createFileFromPath(
-  filePath: string,
-  filename: string,
-  contentType: string
-): Promise<File> {
-  const buffer = await readFile(filePath);
-  const uint8Array = new Uint8Array(buffer);
-  const blob = new Blob([uint8Array], { type: contentType });
-  return new File([blob], filename, { type: contentType });
-}
-
-export async function generateKeyMoments(
-  transcript: string
-): Promise<KeyMoment[]> {
-  if (!openai) {
-    throw new Error('OpenAI API key not configured');
-  }
-  const prompt = `
-    Analyze this video transcript and identify 5-8 key moments that would make engaging short-form content.
-    For each moment, provide:
-    - A catchy title
-    - A brief description
-    - Start and end timestamps (in seconds)
-    - Relevant hashtags
-
-    Transcript: ${transcript}
-
-    Return the response as a JSON array of objects with the following structure:
-    [
-      {
-        "title": "Catchy Title",
-        "description": "Brief description",
-        "startTime": 30,
-        "endTime": 45,
-        "hashtags": ["#hashtag1", "#hashtag2"]
-      }
-    ]
+    Transcript with Timestamps:
+    ${transcriptWithTimestamps}
   `;
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7,
-  });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error('Failed to generate key moments');
-  }
-
-  try {
-    return JSON.parse(content);
-  } catch (error) {
-    console.error('Error generating key moments:', error);
-    throw new Error('Failed to parse key moments response');
-  }
+    const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.5,
+        response_format: { type: "json_object" },
+    });
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+        throw new Error('Failed to generate key moments: No content returned from AI.');
+    }
+    try {
+        const parsedJson = JSON.parse(content);
+        if (!parsedJson.clips || !Array.isArray(parsedJson.clips)) {
+          throw new Error('AI response did not contain a valid "clips" array.');
+        }
+        return parsedJson.clips;
+    } catch (error) {
+        console.error('Error parsing key moments:', error);
+        console.error('Problematic content from AI:', content);
+        throw new Error('Failed to parse key moments response from AI.');
+    }
 }
 
-export async function generateCaptionsForClip(
-  title: string,
-  description: string,
-  transcript: string
-): Promise<string> {
-  if (!openai) {
-    throw new Error('OpenAI API key not configured');
-  }
-  const prompt = `
-    Create engaging captions for a short video clip.
-
+// A simpler AI function to generate a caption (text for a social media post)
+// for a specific clip, based on its title and description.
+export async function generateCaptionsForClip(title: string, description: string, transcript: string): Promise<string> {
+    const prompt = `
+    Create an engaging caption for a short video clip.
     Title: ${title}
     Description: ${description}
     Transcript excerpt: ${transcript}
-
-    Generate captions that are:
-    - Engaging and attention-grabbing
-    - Optimized for social media
-    - Include emojis where appropriate
-    - Keep it under 200 characters
-
+    Generate a caption that is engaging, optimized for social media, includes emojis, and is under 200 characters.
     Return only the caption text.
   `;
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.8,
-    max_tokens: 100,
-  });
-
-  return response.choices[0]?.message?.content || '';
+    const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        max_tokens: 150,
+    });
+    return response.choices[0]?.message?.content || ' '; // Return a space if empty to prevent ffmpeg errors
 }
 
+// The "workhorse" of the system. It uses FFmpeg to clip the original video
+// at the exact timestamps and "burns" the captions directly onto the new video frames.
 export async function createVideoClip(
   originalVideoPath: string,
   startTime: number,
@@ -213,103 +201,60 @@ export async function createVideoClip(
   captions?: string
 ): Promise<void> {
   const duration = endTime - startTime;
+  const safeCaptions = sanitizeTextForFFmpeg(captions || '');
   const filterComplex = captions
-    ? `[0:v]scale=${getScaleForAspectRatio(
-        aspectRatio
-      )},drawtext=text='${captions}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=h-th-10[v]`
+    ? `[0:v]scale=${getScaleForAspectRatio(aspectRatio)},drawtext=text='${safeCaptions}':fontcolor=white:fontsize=48:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=h-th-50[v]`
     : `[0:v]scale=${getScaleForAspectRatio(aspectRatio)}[v]`;
 
   return new Promise((resolve, reject) => {
     const args = [
-      '-i',
-      originalVideoPath,
-      '-ss',
-      startTime.toString(),
-      '-t',
-      duration.toString(),
-      '-filter_complex',
-      filterComplex,
-      '-map',
-      '[v]',
-      '-map',
-      '0:a',
-      '-c:v',
-      'libx264',
-      '-c:a',
-      'aac',
-      '-preset',
-      'fast',
-      '-y',
-      outputPath,
+      '-i', originalVideoPath, '-ss', startTime.toString(), '-t', duration.toString(),
+      '-filter_complex', filterComplex, '-map', '[v]', '-map', '0:a',
+      '-c:v', 'libx264', '-c:a', 'aac', '-preset', 'fast', '-y', outputPath,
     ];
-
     const ffmpeg = spawn('ffmpeg', args);
-
-    ffmpeg.on('close', (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`FFmpeg process exited with code ${code}`));
-      }
+    let errorOutput = '';
+    ffmpeg.stderr.on('data', data => errorOutput += data.toString());
+    ffmpeg.on('close', code => {
+      if (code === 0) resolve();
+      else reject(new Error(`FFmpeg process exited with code ${code}. Stderr: ${errorOutput}`));
     });
-
-    ffmpeg.on('error', (err) => {
-      reject(err);
-    });
+    ffmpeg.on('error', err => reject(err));
   });
 }
 
-function getScaleForAspectRatio(aspectRatio: string): string {
-  switch (aspectRatio) {
-    case '9:16':
-      return '1080:1920';
-    case '1:1':
-      return '1080:1080';
-    case '16:9':
-      return '1920:1080';
-    default:
-      return '1920:1080';
-  }
-}
-
-export async function processVideoToExtractKeyMoments(
-  videoPath: string
-): Promise<ProcessedClip[]> {
+// The main "orchestrator". This function ties everything together. It is
+// called by your tRPC router and executes each step of the pipeline in the correct order.
+export async function processVideoToExtractKeyMoments(videoPath: string): Promise<ProcessedClip[]> {
   try {
-    // Extract audio
+    console.log("Step 1: Extracting audio...");
     const audioPath = await extractAudioFromVideo(videoPath);
-
-    // Transcribe audio
-    const transcript = await transcribeAudio(audioPath);
-
-    // Generate key moments
+    
+    console.log("Step 2: Transcribing audio...");
+    const transcript = await getTranscription(audioPath, { format: 'verbose_json' }) as VerboseTranscription;
+    
+    console.log("Step 3: Generating key moments with AI...");
     const keyMoments = await generateKeyMoments(transcript);
-
+    
+    console.log(`Step 4: Found ${keyMoments.length} key moments. Creating clips...`);
     const processedClips: ProcessedClip[] = [];
-    const aspectRatios = ['9:16', '1:1', '16:9'];
-
+    const aspectRatios = ['9:16']; // Focusing on one aspect ratio for simplicity
+    
     for (const moment of keyMoments) {
       for (const aspectRatio of aspectRatios) {
         const clipId = randomUUID();
         const outputPath = join(tmpdir(), `${clipId}_${aspectRatio}.mp4`);
+        const momentText = transcript.segments
+            .filter(seg => seg.start >= moment.startTime && seg.end <= moment.endTime)
+            .map(seg => seg.text)
+            .join(' ');
+            
+        console.log(`  - Generating caption for moment: "${moment.title}"`);
+        const captions = await generateCaptionsForClip(moment.title, moment.description, momentText);
 
-        // Generate captions
-        const captions = await generateCaptionsForClip(
-          moment.title,
-          moment.description,
-          transcript
-        );
-
-        // Create video clip
-        await createVideoClip(
-          videoPath,
-          moment.startTime,
-          moment.endTime,
-          aspectRatio,
-          outputPath,
-          captions
-        );
-
+        console.log(`  - Creating video clip for moment: "${moment.title}"`);
+        await createVideoClip(videoPath, moment.startTime, moment.endTime, aspectRatio, outputPath, captions);
+        
         processedClips.push({
           title: moment.title,
           description: moment.description,
@@ -322,10 +267,10 @@ export async function processVideoToExtractKeyMoments(
         });
       }
     }
-
+    console.log("Step 5: Finished creating all clips.");
     return processedClips;
   } catch (error) {
-    console.error('Error processing video:', error);
+    console.error('FATAL ERROR in video processing pipeline:', error);
     throw error;
   }
 }
