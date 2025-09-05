@@ -50,9 +50,9 @@ jobs:
         cp -r public deployment-package/
         cp -r node_modules deployment-package/
         cp package.json deployment-package/
-        cp next.config.js deployment-package/
+        cp next.config.ts deployment-package/
         cp -r prisma deployment-package/
-        echo 'module.exports = { output: "standalone" }' > deployment-package/next.config.js
+        echo 'import type { NextConfig } from "next"; const config: NextConfig = { output: "standalone" }; export default config;' > deployment-package/next.config.ts
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
