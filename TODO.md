@@ -1,9 +1,12 @@
-# TODO: Add Toggle for Monthly/Yearly Subscription
+# TODO: Deploy Webapp to Azure
 
-1. ✅ Add React state for billing period (monthly/yearly)
-2. ✅ Update plans array to include yearly prices (17% discount) and placeholder priceIds
-3. ✅ Add toggle UI component above plans grid
-4. ✅ Modify price display to show based on selected period
-5. ✅ Update handleSubscribe to use correct priceId
-6. ✅ Test toggle functionality (server started successfully, code compiles without errors)
-trigger
+1. ✅ Create Azure Resource Group in North Europe
+2. ✅ Create Azure Database for PostgreSQL (Flexible Server)
+3. ✅ Create Azure App Service (Linux, Node.js 20 LTS)
+4. ✅ Configure database firewall and connection string
+5. ✅ Create GitHub Actions workflow for CI/CD
+6. ✅ Update package.json build script for Azure
+7. ✅ Set environment variables in Azure App Service
+8. ⏳ Push code to GitHub and trigger deployment
+9. ⏳ Test the deployed application
+10. ⏳ Verify database migrations and API routes
