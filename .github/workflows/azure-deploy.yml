@@ -42,8 +42,17 @@ jobs:
         STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
         NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
 
-    - name: Build application
-      run: npm run build
+    - name: Build and prepare deployment package
+      run: |
+        npm run build
+        mkdir -p deployment-package
+        cp -r .next deployment-package/
+        cp -r public deployment-package/
+        cp -r node_modules deployment-package/
+        cp package.json deployment-package/
+        cp next.config.js deployment-package/
+        cp -r prisma deployment-package/
+        echo 'module.exports = { output: "standalone" }' > deployment-package/next.config.js
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
@@ -58,7 +67,7 @@ jobs:
         app-name: 'repurposeai-webapp'
         slot-name: 'production'
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: .
+        package: deployment-package
       env:
         NODE_ENV: production
         WEBSITE_NODE_DEFAULT_VERSION: '20.19.4'
