@@ -1,5 +1,106 @@
 # What's New - RepurposeAI
 
+# Hatus Batista - (05/09/2025)
+
+### Successful Migration from Vercel to Azure: Complete Infrastructure Overhaul
+
+After careful consideration of our growing user base in Europe and Brazil, we have successfully migrated RepurposeAI from Vercel to Microsoft Azure. This strategic move provides better performance, scalability, and cost optimization for our international user base.
+
+## Migration Process & Infrastructure Setup
+
+### 1. Azure Resource Provisioning
+- **Resource Group**: Created `RepurposeAI-rg` in North Europe region for optimal performance across Europe and Brazil
+- **Database**: Azure Database for PostgreSQL Flexible Server (`repurposeai-db`)
+  - PostgreSQL version 15
+  - Standard B1ms tier with 32GB storage
+  - Configured with public access and proper firewall rules
+- **Web App**: Azure App Service (`repurposeai-webapp`)
+  - Linux environment with Node.js 20 LTS runtime
+  - Standard S1 plan for production workload
+  - Configured for Next.js deployment
+
+### 2. Database Migration & Configuration
+- **Connection String**: `postgresql://repurposeadmin:AzureSecurePass123@repurposeai-db.postgres.database.azure.com:5432/postgres?sslmode=require`
+- **Firewall Rules**: Added GitHub Actions IP ranges (20.87.225.192-20.87.225.207) for CI/CD pipeline access
+- **Environment Variables**: Configured `DATABASE_URL` in both GitHub Actions and Azure App Service
+- **Prisma Integration**: Maintained existing Prisma schema with Azure PostgreSQL compatibility
+
+### 3. CI/CD Pipeline Implementation
+- **GitHub Actions Workflow**: Created `.github/workflows/azure-deploy.yml`
+  - Automated build and deployment process
+  - Environment variable management for secrets
+  - Prisma client generation and database migrations
+  - Azure Web App deployment with proper configuration
+- **Build Configuration**: Updated `package.json` build script for Azure compatibility
+- **Deployment File**: Added `.deployment` file for proper Next.js static generation
+
+### 4. Security & Access Management
+- **Service Principal**: Configured Azure service principal for GitHub Actions authentication
+- **Secrets Management**: Set up `AZURE_CREDENTIALS` and `DATABASE_URL` in GitHub repository secrets
+- **Firewall Configuration**: Implemented secure database access with IP whitelisting
+- **Environment Variables**: Properly configured all required secrets (OpenAI, Stripe, NextAuth, etc.)
+
+### 5. Application Architecture Considerations
+- **Multi-Region Optimization**: Positioned in North Europe for optimal performance across target markets
+- **Scalability**: Azure App Service provides auto-scaling capabilities for future growth
+- **Cost Optimization**: Moved from Vercel's usage-based pricing to Azure's predictable pricing model
+- **Future Enhancements**: Prepared infrastructure for Azure Front Door implementation to further optimize global performance
+
+## Technical Challenges Resolved
+
+### Database Authentication Issues
+- **Problem**: Initial deployment failed due to PostgreSQL authentication errors
+- **Solution**: Reset database admin password and updated all connection strings
+- **Firewall Configuration**: Added GitHub Actions IP ranges to database firewall rules
+
+### Build Process Optimization
+- **Problem**: Next.js deployment configuration for Azure App Service
+- **Solution**: Created custom `.deployment` file and updated build scripts
+- **Result**: Successful automated deployment pipeline
+
+### Environment Variable Management
+- **Problem**: Coordinating secrets between GitHub Actions and Azure App Service
+- **Solution**: Implemented dual configuration approach for maximum compatibility
+- **Security**: Maintained secure credential management throughout migration
+
+## Benefits Achieved
+
+### Performance Improvements
+- **Geographic Optimization**: North Europe region provides better latency for European and Brazilian users
+- **Azure CDN**: Built-in content delivery network capabilities
+- **Scalable Architecture**: Auto-scaling capabilities for handling traffic spikes
+
+### Cost Optimization
+- **Predictable Pricing**: Moved from Vercel's variable pricing to Azure's fixed-cost model
+- **Resource Efficiency**: Right-sized Azure resources for current workload
+- **Future-Proofing**: Infrastructure ready for growth without immediate cost increases
+
+### Operational Excellence
+- **Automated Deployments**: GitHub Actions provides reliable CI/CD pipeline
+- **Monitoring & Logging**: Azure Application Insights integration ready
+- **Backup & Recovery**: Automated database backups with Azure's built-in solutions
+
+## Next Steps & Future Enhancements
+
+### Immediate Priorities
+- **Testing**: Complete end-to-end testing of deployed application
+- **Monitoring**: Set up Azure Application Insights for performance monitoring
+- **Optimization**: Fine-tune Azure resource allocation based on usage patterns
+
+### Future Infrastructure Improvements
+- **Azure Front Door**: Implement global CDN for multi-region optimization
+- **Azure Key Vault**: Enhanced secrets management
+- **Azure Monitor**: Comprehensive application and infrastructure monitoring
+- **Azure Backup**: Automated backup solutions for database and application
+
+### Migration Learnings
+- **Database Migration**: Successfully transitioned from Vercel-hosted to Azure-managed PostgreSQL
+- **CI/CD Best Practices**: Established robust deployment pipeline with proper security
+- **Multi-Cloud Strategy**: Gained experience in cloud migration and optimization
+- **Cost Management**: Implemented more predictable and transparent pricing model
+
+This migration represents a significant milestone in RepurposeAI's infrastructure evolution, positioning us for sustainable growth while optimizing performance for our international user base.
+
 ## Technical Updates and Improvements - August 2025
 
 ### 1. Database Configuration and Error Resolution
