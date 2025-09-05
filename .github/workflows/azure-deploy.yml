@@ -13,27 +13,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
         cache: 'npm'
 
-    - name: Verify Node.js and npm versions
+    - name: Run build script
       run: |
-        node --version
-        npm --version
-
-    - name: Install dependencies
-      run: npm ci --production=false
-
-    - name: Generate Prisma client
-      run: npx prisma generate
+        chmod +x ./scripts/deploy.sh
+        ./scripts/deploy.sh
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
@@ -42,33 +31,13 @@ jobs:
         STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
         NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
 
-    - name: Stop web app before deployment
+    - name: Prepare standalone deployment
       run: |
-        az webapp stop --name repurposeai-webapp --resource-group repurposeai-rg || echo "Web app already stopped or not found"
-        sleep 10
-
-    - name: Build and prepare deployment package
-      run: |
-        npm run build
-        mkdir -p deployment-package
-        cp -r .next/standalone deployment-package/
-        mkdir -p deployment-package/.next
-        cp -r .next/static deployment-package/.next/static
-        cp -r public deployment-package/
-        cp -r node_modules deployment-package/
-        cp package.json deployment-package/
-        cp next.config.ts deployment-package/
-        cp -r prisma deployment-package/
-        # Create proper startup script for Azure
-        echo 'npm start' > deployment-package/startup.sh
-        chmod +x deployment-package/startup.sh
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-        STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-        NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+        # Copy static files to standalone directory
+        cp -r .next/static .next/standalone/.next/static
+        cp -r public .next/standalone/public
+        # Copy prisma directory for database operations
+        cp -r prisma .next/standalone/
 
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v3
@@ -76,12 +45,13 @@ jobs:
         app-name: 'repurposeai-webapp'
         slot-name: 'production'
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: deployment-package
-      env:
-        NODE_ENV: production
-        WEBSITE_NODE_DEFAULT_VERSION: '20.19.4'
-        WEBSITE_NPM_DEFAULT_VERSION: '10.8.2'
+        package: .next/standalone
 
-    - name: Start web app after deployment
+    - name: Azure Login (for startup command)
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Set startup command
       run: |
-        az webapp start --name repurposeai-webapp --resource-group repurposeai-rg || echo "Failed to start web app"
+        az webapp config set --name repurposeai-webapp --resource-group repurposeai-rg --startup-file "npx prisma migrate deploy && node server.js"
