@@ -52,6 +52,7 @@ jobs:
         npm run build
         mkdir -p deployment-package
         cp -r .next/standalone deployment-package/
+        mkdir -p deployment-package/.next
         cp -r .next/static deployment-package/.next/static
         cp -r public deployment-package/
         cp -r node_modules deployment-package/
