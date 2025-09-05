@@ -19,6 +19,11 @@ jobs:
         node-version: '20.x'
         cache: 'npm'
 
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
     - name: Run build script
       run: |
         chmod +x ./scripts/deploy.sh
@@ -46,11 +51,6 @@ jobs:
         slot-name: 'production'
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         package: .next/standalone
-
-    - name: Azure Login (for startup command)
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Set startup command
       run: |
