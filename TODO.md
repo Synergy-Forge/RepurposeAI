@@ -10,7 +10,10 @@
 8. ✅ Set DATABASE_URL in Azure App Service configuration
 9. ✅ Push code to GitHub and trigger deployment
 10. ✅ Fix deployment issue: Added .deployment file for proper Next.js deployment
-11. 🔄 Update GitHub DATABASE_URL secret with new password (AzureSecurePass123)
-12. 🔄 Test the deployed application after DATABASE_URL fix
-13. 🔄 Verify database migrations and API routes
-14. 🔄 Consider Azure Front Door for multi-region optimization (Europe + Brazil)
+11. ✅ Fix Azure deployment command parsing issue with bash -c wrapper
+12. 🔄 Update GitHub DATABASE_URL secret with new password (AzureSecurePass123)
+13. 🔄 Test the deployed application after DATABASE_URL fix
+14. 🔄 Verify database migrations and API routes
+15. 🔄 Consider Azure Front Door for multi-region optimization (Europe + Brazil)
+16. ✅ Fix Prisma binary issue in Azure deployment by explicitly running npx prisma generate
+17. ✅ Configure Azure App Service to use Node.js 20 LTS to resolve EBADENGINE warnings
