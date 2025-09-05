@@ -1,13 +1,9 @@
-# Fix Azure App Service Node.js Version Issue
+# Google Login Debug TODO
 
-## Steps to Complete
-- [x] Regenerate package-lock.json with Node.js 20
-- [x] Update Azure App Service runtime to Node.js 20 LTS
-- [x] Clear Azure App Service cache (via restart)
-- [x] Redeploy the application (runtime updated, next push will use Node.js 20)
-
-## Details
-- Ensure Node.js 20 is used for npm install
-- Use Azure CLI or portal to update runtime version
-- Clear cache to remove any cached old Node.js version
-- Trigger a new deployment after changes
+- [ ] Verify environment variables are set (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, NEXTAUTH_SECRET, NEXTAUTH_URL, DATABASE_URL)
+- [ ] Start the development server
+- [ ] Check database connection and run migrations if needed
+- [ ] Test Google login flow
+- [ ] Check browser console for errors
+- [ ] Verify Google OAuth callback URL configuration
+- [ ] Test dashboard access after successful login

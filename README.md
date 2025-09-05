@@ -26,7 +26,7 @@ A modern, full-stack SaaS application for repurposing long-form video content in
   - OpenAI Whisper API for transcription
   - OpenAI GPT-4o for content generation
   - FFmpeg for video processing
-- **Deployment**: Vercel (serverless)
+- **Deployment**: Azure Web App
 
 ## 📋 Prerequisites
 
@@ -36,6 +36,7 @@ A modern, full-stack SaaS application for repurposing long-form video content in
 - OpenAI API key
 - Google OAuth credentials
 - Stripe account
+- Azure CLI installed and configured
 
 ## 🚀 Quick Start
 
@@ -133,37 +134,61 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 ## 📁 Project Structure
 
 ```
-src/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   ├── video/[id]/        # Video details page
-│   └── page.tsx           # Main landing page
-├── components/            # React components
-│   ├── providers/         # Context providers
-│   └── ui/               # shadcn/ui components
-├── lib/                  # Utility libraries
-│   ├── auth.ts           # NextAuth configuration
-│   ├── prisma.ts         # Prisma client
-│   ├── store.ts          # Zustand store
-│   ├── trpc.ts           # tRPC configuration
-│   └── video-processing.ts # Video processing utilities
-├── server/               # tRPC server
-│   └── api/              # API routers
-└── types/                # TypeScript type definitions
+├── .deployment            # Azure deployment configuration
+├── azuredeploy.json       # Azure Resource Manager template
+├── scripts/               # Deployment and utility scripts
+│   ├── deploy.sh         # Deployment script
+│   └── startup.sh        # Startup script
+├── Docs/                  # Documentation
+│   └── What's_new.md     # Release notes
+├── prisma/                # Database schema and migrations
+│   ├── schema.prisma     # Prisma schema
+│   ├── migrations/       # Database migrations
+│   └── seed.ts           # Database seeding
+├── .github/               # GitHub workflows
+│   └── workflows/
+│       └── azure-deploy.yml # Azure deployment workflow
+├── src/
+│   ├── app/              # Next.js app directory
+│   │   ├── api/          # API routes
+│   │   │   ├── auth/     # Authentication routes
+│   │   │   ├── trpc/     # tRPC routes
+│   │   │   └── webhooks/ # Webhook handlers
+│   │   ├── dashboard/    # Dashboard page
+│   │   ├── login/        # Login page
+│   │   ├── register/     # Registration page
+│   │   ├── subscription/ # Subscription page
+│   │   ├── video/        # Video pages
+│   │   └── page.tsx      # Main landing page
+│   ├── components/       # React components
+│   │   ├── providers/    # Context providers
+│   │   └── ui/           # shadcn/ui components
+│   ├── lib/              # Utility libraries
+│   │   ├── auth.ts       # NextAuth configuration
+│   │   ├── prisma.ts     # Prisma client
+│   │   ├── store.ts      # Zustand store
+│   │   ├── trpc.ts       # tRPC configuration
+│   │   ├── types.ts      # Type definitions
+│   │   └── video-processing.ts # Video processing utilities
+│   ├── server/           # tRPC server
+│   │   └── api/          # API routers
+│   └── types/            # TypeScript type definitions
+└── public/               # Static assets
 ```
 
 ## 🚀 Deployment
 
-### Vercel Deployment
+### Azure Web App Deployment
 
 1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy
+2. Create a new Azure Web App in the Azure Portal
+3. Connect your GitHub repository to the Azure Web App deployment center
+4. Configure build settings and environment variables in the Azure Portal
+5. Deploy your application
 
 ### Environment Variables for Production
 
-Make sure to set all environment variables in your Vercel dashboard:
+Make sure to set all environment variables in your Azure Web App configuration:
 
 - `DATABASE_URL`: Your production PostgreSQL connection string
 - `NEXTAUTH_SECRET`: A secure random string
