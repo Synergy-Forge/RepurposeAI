@@ -69,7 +69,7 @@ export default function SubscriptionPage() {
     },
     {
       name: 'Starter',
-      price: { month: '$9.99', year: '$98.99' }, // 17% discount approx for yearly
+      price: { month: '$9.99', year: '$99' }, // 17% discount approx for yearly
       period: { month: '/month', year: '/year' },
       features: [
         'Export videos in Full HD 1080p',
@@ -78,12 +78,12 @@ export default function SubscriptionPage() {
         'Standard support',
         'No watermark',
       ],
-      priceId: { month: 'prod_Sv9zE3Lt3Dza4U', year: 'prod_YEARLY_Starter' }, // Replace with actual yearly priceId
+      priceId: { month: 'prod_Sv9zE3Lt3Dza4U', year: 'prod_Szk7iWgJ9yfxrq' }, // Stripe price IDs
       popular: false,
     },
     {
       name: 'Creator',
-      price: { month: '$24.99', year: '$247.41' }, // 17% discount approx for yearly
+      price: { month: '$24.99', year: '$249' }, 
       period: { month: '/month', year: '/year' },
       features: [
         'Export videos in Full HD 1080p',
@@ -95,12 +95,12 @@ export default function SubscriptionPage() {
         'Priority support',
         'Custom branding',
       ],
-      priceId: { month: 'prod_SzjVo4rdm3LBx0', year: 'prod_YEARLY_Creator' }, // Replace with actual yearly priceId
+      priceId: { month: 'prod_SzjVo4rdm3LBx0', year: 'prod_Szk5YrAfOq7C0l' }, // Stripe price IDs
       popular: true,
     },
     {
       name: 'Producer',
-      price: { month: '$69.99', year: '$695.41' }, // 17% discount approx for yearly
+      price: { month: '$69.99', year: '$699' }, // 17% discount approx for yearly
       period: { month: '/month', year: '/year' },
       features: [
         'Export videos in Full HD 1080p',
@@ -115,7 +115,7 @@ export default function SubscriptionPage() {
         'Analytics dashboard',
         'Team collaboration',
       ],
-      priceId: { month: 'prod_Szjf5hO6PQoUja', year: 'prod_YEARLY_Producer' }, // Replace with actual yearly priceId
+      priceId: { month: 'prod_Szjf5hO6PQoUja', year: 'prod_Szk4OGazQoSRbi' }, // // Stripe price IDs
       popular: true,
     },
   ];
