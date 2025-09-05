@@ -1,0 +1,4 @@
+[config]
+project = .
+command = npm run build
+SCM_DO_BUILD_DURING_DEPLOYMENT = true
