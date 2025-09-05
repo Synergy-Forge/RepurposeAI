@@ -50,13 +50,16 @@ jobs:
       run: |
         npm run build
         mkdir -p deployment-package
-        cp -r .next deployment-package/
+        cp -r .next/standalone deployment-package/
+        cp -r .next/static deployment-package/.next/static
         cp -r public deployment-package/
         cp -r node_modules deployment-package/
         cp package.json deployment-package/
         cp next.config.ts deployment-package/
         cp -r prisma deployment-package/
-        echo 'import type { NextConfig } from "next"; const config: NextConfig = { output: "standalone" }; export default config;' > deployment-package/next.config.ts
+        # Create proper startup script for Azure
+        echo 'npm start' > deployment-package/startup.sh
+        chmod +x deployment-package/startup.sh
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
