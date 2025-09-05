@@ -176,6 +176,15 @@ This setup significantly improves our development process by:
 
 ### After a deep analysis of the market and our core brand value of "Simplicity Intelligent," I've established our go-to-market pricing strategy.
 
-- Decided to move away from the confusing "credits" model used by competitors and adopted a transparent "Minutes Processed" system. This is a key differentiator and aligns with our user-centric approach.
-- Defined four clear user tiers (Free, Starter, Creator, Producer), each with a distinct value proposition to create a clear upgrade path.
-- Also conducted a full financial analysis, calculating our variable/fixed costs, margins, and break-even points to ensure this model is sustainable for the business from day one.
+- **Decided to move away from the confusing "credits" model used by competitors and adopted a transparent "Minutes Processed" system. This is a key differentiator and aligns with our user-centric approach.**
+- **Defined four clear user tiers (Free, Starter, Creator, Producer), each with a distinct value proposition to create a clear upgrade path.**
+- **Also conducted a full financial analysis, calculating our variable/fixed costs, margins, and break-even points to ensure this model is sustainable for the business from day one.**
+
+# Felipe Abe- (04/09/2025)
+
+### Foundational infrastructure for our asynchronous processing architecture, getting us ready to scale.
+
+- **Provisioned a new project on Railway which will house our core backend services. This includes setting up the PostgreSQL database and a Redis instance that we'll use for our upcoming BullMQ job queue.**
+- **I've also configured ZeptoMail as our transactional email provider. This will handle all system notifications like sign-ups, password resets, and job completion alerts.**
+
+**This is a crucial first step towards building a backend that can handle long-running video processing jobs reliably.**
