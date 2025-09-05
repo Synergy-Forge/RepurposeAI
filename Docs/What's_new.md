@@ -319,3 +319,13 @@ This setup significantly improves our development process by:
 - **I've also configured ZeptoMail as our transactional email provider. This will handle all system notifications like sign-ups, password resets, and job completion alerts.**
 
 **This is a crucial first step towards building a backend that can handle long-running video processing jobs reliably.**
+
+# Felipe Abe - (05/09/2025)
+
+### Complete refactor of the video processing pipeline for improved reliability and performance.
+
+- **Implemented audio stream validation before processing and significantly improved FFmpeg error handling with detailed stderr capture.**
+- **Added transcription with precise timestamps and text sanitization for safer captions, while simplifying to single aspect ratio (9:16) for performance optimization.**
+- **Removed unused functions and implemented structured AI response validation in JSON format, with detailed progress logging throughout the entire pipeline.**
+
+**This refactor establishes a solid and reliable foundation for video processing, eliminating failure points and optimizing the user experience.**
