@@ -1,103 +1,101 @@
 'use client';
 
-import { Suspense } from 'react';
-import { signIn } from 'next-auth/react';
-import { useSearchParams } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { signIn } from "next-auth/react";
+import { useSearchParams } from 'next/navigation';
 
-function LoginContent() {
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  OAuthCallback: 'Error during authentication with your provider. Please try again.',
+  OAuthSignin: 'Error trying to sign in with your provider.',
+  OAuthAccountNotLinked: 'This email is already associated with another provider. Please sign in using the original method.',
+  EmailSignin: 'Failed to send sign-in email.',
+  CredentialsSignin: 'Sign in failed. Check the details you provided.',
+  Default: 'An unexpected error occurred during authentication.'
+};
+
+export default function LoginPage() {
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-  const error = searchParams.get('error');
 
-  const handleGoogleSignIn = async () => {
-    try {
-      await signIn('google', { 
-        callbackUrl,
-        redirect: true 
-      });
-    } catch (error) {
-      console.error('Erro no login:', error);
+  // Effect to read and display any authentication errors from the URL
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(AUTH_ERROR_MESSAGES[errorParam] || AUTH_ERROR_MESSAGES.Default);
     }
+  }, [searchParams]);
+
+  // Simplified Google Login handler
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    // Let NextAuth handle the entire redirect flow.
+    await signIn('google');
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
-        <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
-            <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-            </svg>
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Fazer login
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Entre para acessar sua conta
-          </p>
-        </div>
+  const dismissError = () => setError(null);
 
+  return (
+    // Main container with dark theme
+    <div className="min-h-screen bg-black text-white flex justify-center items-center p-4">
+      
+      {/* Central login card with the dark, modern style */}
+      <div className="bg-gray-900/85 backdrop-blur-md border border-white/10 rounded-2xl p-8 sm:p-10 w-full max-w-md text-center shadow-2xl">
+        <h1 className="text-3xl lg:text-4xl font-bold mb-3">
+          Welcome Back
+        </h1>
+        <p className="text-gray-400 mb-8">
+          Sign in to continue to your dashboard.
+        </p>
+
+        {/* Error Message Component */}
         {error && (
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-800">
-                  Erro ao fazer login. Tente novamente.
-                </p>
-              </div>
-            </div>
+          <div className="mb-6 p-4 bg-red-900/50 border border-red-500/50 rounded-lg text-left">
+            <p className="text-red-200 text-sm font-medium">{error}</p>
+            <button
+              onClick={dismissError}
+              className="mt-2 text-xs text-red-300/70 hover:text-red-200 underline"
+            >
+              Dismiss
+            </button>
           </div>
         )}
 
-        <div className="mt-8 space-y-4">
-          <button
-            onClick={handleGoogleSignIn}
-            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-              <svg className="h-5 w-5" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        {/* Sign-in with Google Button */}
+        <button
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full py-3 border border-gray-600 rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-3 bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              Signing in...
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" viewBox="0 0 48 48">
+                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
+                <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
+                <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.901,35.637,44,28.718,44,20C44,22.659,43.862,21.35,43.611,20.083z"></path>
               </svg>
-            </span>
-            Continuar com Google
-          </button>
+              Sign in with Google
+            </>
+          )}
+        </button>
 
-          <div className="text-center">
-            <Link 
-              href="/register" 
-              className="text-blue-600 hover:text-blue-500 text-sm font-medium"
-            >
-              Não tem uma conta? Cadastre-se
-            </Link>
-          </div>
+        {/* Link to the register page */}
+        <div className="mt-6 text-sm">
+          <span className="text-gray-400">Don&apos;t have an account? </span>
+          <Link href="/register" className="text-purple-400 font-medium no-underline transition-colors duration-300 hover:text-purple-300 hover:underline">
+            Sign up
+          </Link>
         </div>
       </div>
     </div>
   );
 }
 
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Carregando...</p>
-          </div>
-        </div>
-      </div>
-    }>
-      <LoginContent />
-    </Suspense>
-  );
-}
