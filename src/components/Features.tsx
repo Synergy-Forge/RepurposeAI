@@ -44,7 +44,7 @@ const Features: React.FC = () => {
   return (
     <section id="features" className="py-16 lg:py-24 px-[5%] bg-black text-center">
       <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-5">
-        Ferramentas poderosas, resultados profissionais.
+        Pro-level results, powered by simple tools.
       </h2>
       <p className="text-lg lg:text-xl leading-relaxed max-w-3xl mx-auto mb-16 text-gray-300">
         All the tools you need to create professional videos in minutes, not hours (or even days).

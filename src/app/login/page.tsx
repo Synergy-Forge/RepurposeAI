@@ -1,19 +1,44 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface FormData {
   email: string;
   password: string;
 }
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  OAuthCallback: 'Erro na autenticação com Google. Tente novamente.',
+  OAuthSignin: 'Erro ao iniciar a autenticação com Google.',
+  OAuthCallbackError: 'Erro no retorno da autenticação Google.',
+  Configuration: 'Erro de configuração do servidor.',
+  AccessDenied: 'Acesso negado. Permita o acesso ao Google.',
+  Verification: 'Token de verificação inválido.',
+  Default: 'Erro inesperado na autenticação.'
+};
+
+const REDIRECT_DELAY = 1000;
+
 export default function LoginPage() {
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: ''
   });
+  
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(errorParam);
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -25,13 +50,46 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // TODO: Implementar autenticação por email/senha
     console.log('Login attempt:', formData);
   };
 
-  const handleGoogleLogin = () => {
-    console.log('Google login attempt');
-    signIn("google");
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const result = await signIn('google', { 
+        redirect: false,
+        callbackUrl: '/dashboard'
+      });
+      
+      if (result?.error) {
+        setError(result.error);
+        return;
+      } 
+      
+      if (result?.ok) {
+        // Aguarda a criação da sessão antes de redirecionar
+        setTimeout(async () => {
+          const session = await getSession();
+          
+          if (session) {
+            router.push('/dashboard');
+          } else {
+            setError('Falha ao criar sessão');
+          }
+        }, REDIRECT_DELAY);
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+      setError('Erro inesperado durante a autenticação');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const dismissError = () => setError(null);
 
   return (
     <div className="font-['Space_Grotesk'] min-h-screen bg-black text-white overflow-y-auto">
@@ -53,6 +111,24 @@ export default function LoginPage() {
           <p className="text-gray-400 mb-8">
             Login to continue creating amazing content.
           </p>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-900/50 border border-red-500/50 rounded-lg backdrop-blur-sm">
+              <p className="text-red-200 text-sm font-medium">
+                {AUTH_ERROR_MESSAGES[error] || AUTH_ERROR_MESSAGES.Default}
+              </p>
+              <p className="text-red-300/70 text-xs mt-1">
+                Código: {error}
+              </p>
+              <button
+                onClick={dismissError}
+                className="mt-2 text-xs text-red-300/70 hover:text-red-200 underline"
+              >
+                Dispensar
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="mb-5 text-left">
@@ -102,15 +178,25 @@ export default function LoginPage() {
 
           <button
             onClick={handleGoogleLogin}
-            className="w-full py-4 border border-gray-600 rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-3 bg-gray-800 text-white hover:bg-gray-700"
+            disabled={loading}
+            className="w-full py-4 border border-gray-600 rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-3 bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <svg className="w-5 h-5" viewBox="0 0 48 48">
-              <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
-              <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
-              <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
-              <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.901,35.637,44,28.718,44,20C44,22.659,43.862,21.35,43.611,20.083z"></path>
-            </svg>
-            Sign-in with Google
+            {loading ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Signing in...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" viewBox="0 0 48 48">
+                  <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                  <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
+                  <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
+                  <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.901,35.637,44,28.718,44,20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                </svg>
+                Sign-in with Google
+              </>
+            )}
           </button>
 
           <div className="mt-5 text-sm">

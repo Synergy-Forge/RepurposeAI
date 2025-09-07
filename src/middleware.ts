@@ -1,8 +1,9 @@
 import { withAuth } from 'next-auth/middleware';
+import { NextResponse } from 'next/server';
 
 export default withAuth(
   function middleware(_req) {
-    // Add any additional middleware logic here
+    return NextResponse.next();
   },
   {
     callbacks: {
@@ -13,8 +14,10 @@ export default withAuth(
 
 export const config = {
   matcher: [
+    '/dashboard/:path*',
+    '/subscription/:path*', 
     '/video/:path*',
-    '/subscription',
-    // Add other protected routes here
+    '/profile/:path*',
+    '/settings/:path*',
   ],
 };
