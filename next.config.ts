@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  output: process.env.NODE_ENV === 'production' ? "standalone" : undefined,
+  output: process.env.CI === 'true' ? "standalone" : undefined,
 };
 
 export default nextConfig;
