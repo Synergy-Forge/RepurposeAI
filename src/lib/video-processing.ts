@@ -1,24 +1,28 @@
-// This file contains all the logic for processing a video:
-// extracting audio, transcribing it, analyzing with AI to find the best
-// moments, and finally, clipping the original video at those moments.
+// CONTEXT: This file contains all the logic for processing a video.
+// It has been refactored to use "lazy initialization" for the OpenAI client,
+// preventing build-time errors by creating the client only when a function is executed.
 
 import { spawn } from 'child_process';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
-import { getTranscription } from '../lib/transcription'; // Caminho relativo corrigido
+import { getTranscription } from './transcription';
 import { Transcription } from 'openai/resources/audio/transcriptions';
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('OPENAI_API_KEY environment variable is required');
+// This function creates and returns the OpenAI client.
+// It ensures the API key is only read when a function is actually called.
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('FATAL: OPENAI_API_KEY environment variable is not set in the current process.');
+  }
+  return new OpenAI({ apiKey, timeout: 60000 });
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// These interfaces define the "shape" of the data used throughout this file.
+// ============================================================================
+// Interfaces and Helper Types
+// ============================================================================
 
 export interface KeyMoment {
   title: string;
@@ -39,7 +43,6 @@ export interface ProcessedClip {
   hashtags: string;
 }
 
-// Helper types for the verbose transcription response
 interface TranscriptionSegment {
   start: number;
   end: number;
@@ -49,23 +52,17 @@ interface VerboseTranscription extends Transcription {
   segments: TranscriptionSegment[];
 }
 
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
 // A security helper function to sanitize caption text
 // before passing it to FFmpeg, preventing special characters from breaking the command.
 function sanitizeTextForFFmpeg(text: string): string {
   if (!text) return '';
-  const replacements: Array<[string, string]> = [
-    ["'", "'"],
-    ["\\", "\\\\"],
-    ["$", "\\$"], 
-    [":", "\\:"],
-    ['"', '\\"']
-  ];
-  
-  let result = text;
-  for (const [search, replace] of replacements) {
-    result = result.split(search).join(replace);
-  }
-  return result;
+  // Replaces single quotes with a similar-looking but safe character
+  // and escapes other special characters.
+  return text.replace(/'/g, '’').replace(/[\\$:"]/g, "\\$&");
 }
 
 // Uses ffprobe (which comes with FFmpeg) to safely check
@@ -94,6 +91,10 @@ function getScaleForAspectRatio(aspectRatio: string): string {
     default: return '1920:1080';
   }
 }
+
+// ============================================================================
+// Main Exported Functions
+// ============================================================================
 
 // The first step of the pipeline. It takes a video path, verifies
 // if it has audio, and if so, uses FFmpeg to extract and save that audio as an MP3.
@@ -125,6 +126,7 @@ export async function extractAudioFromVideo(videoPath: string): Promise<string> 
 // The AI "brain" of the system. It receives the transcript with timestamps,
 // sends it to GPT-4o, and asks it to identify key moments, returning a structured JSON.
 export async function generateKeyMoments(transcript: VerboseTranscription): Promise<KeyMoment[]> {
+    const openai = getOpenAIClient(); // Client is created here, at runtime.
     const transcriptWithTimestamps = transcript.segments.map(seg => `[${seg.start.toFixed(2)}s - ${seg.end.toFixed(2)}s] ${seg.text}`).join('\n');
     const prompt = `
     Analyze the following video transcript, which includes timestamps for each segment. Your task is to identify 5 to 8 key moments suitable for short-form content.
@@ -173,6 +175,7 @@ export async function generateKeyMoments(transcript: VerboseTranscription): Prom
 // A simpler AI function to generate a caption (text for a social media post)
 // for a specific clip, based on its title and description.
 export async function generateCaptionsForClip(title: string, description: string, transcript: string): Promise<string> {
+    const openai = getOpenAIClient(); // Client is created here, at runtime.
     const prompt = `
     Create an engaging caption for a short video clip.
     Title: ${title}
@@ -274,3 +277,4 @@ export async function processVideoToExtractKeyMoments(videoPath: string): Promis
     throw error;
   }
 }
+

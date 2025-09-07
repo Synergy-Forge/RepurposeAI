@@ -3,13 +3,16 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not configured');
+// Função para inicializar o Stripe apenas quando necessário
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil',
+  });
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-07-30.basil',
-});
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -84,6 +87,9 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
+    // Inicializa o Stripe apenas quando a rota é chamada
+    const stripe = getStripe();
+    
     const signature = (await headers()).get('stripe-signature');
     if (!signature) {
       return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });

@@ -1,215 +1,103 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { Suspense } from 'react';
+import { signIn } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { signIn, getSession } from "next-auth/react";
-import { useSearchParams, useRouter } from 'next/navigation';
 
-interface FormData {
-  email: string;
-  password: string;
-}
-
-const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  OAuthCallback: 'Erro na autenticação com Google. Tente novamente.',
-  OAuthSignin: 'Erro ao iniciar a autenticação com Google.',
-  OAuthCallbackError: 'Erro no retorno da autenticação Google.',
-  Configuration: 'Erro de configuração do servidor.',
-  AccessDenied: 'Acesso negado. Permita o acesso ao Google.',
-  Verification: 'Token de verificação inválido.',
-  Default: 'Erro inesperado na autenticação.'
-};
-
-const REDIRECT_DELAY = 1000;
-
-export default function LoginPage() {
-  const [formData, setFormData] = useState<FormData>({
-    email: '',
-    password: ''
-  });
-  
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+function LoginContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const error = searchParams.get('error');
 
-  useEffect(() => {
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      setError(errorParam);
-    }
-  }, [searchParams]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    // TODO: Implementar autenticação por email/senha
-    console.log('Login attempt:', formData);
-  };
-
-  const handleGoogleLogin = async () => {
+  const handleGoogleSignIn = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      const result = await signIn('google', { 
-        redirect: false,
-        callbackUrl: '/dashboard'
+      await signIn('google', { 
+        callbackUrl,
+        redirect: true 
       });
-      
-      if (result?.error) {
-        setError(result.error);
-        return;
-      } 
-      
-      if (result?.ok) {
-        // Aguarda a criação da sessão antes de redirecionar
-        setTimeout(async () => {
-          const session = await getSession();
-          
-          if (session) {
-            router.push('/dashboard');
-          } else {
-            setError('Falha ao criar sessão');
-          }
-        }, REDIRECT_DELAY);
-      }
     } catch (error) {
-      console.error('Authentication error:', error);
-      setError('Erro inesperado durante a autenticação');
-    } finally {
-      setLoading(false);
+      console.error('Erro no login:', error);
     }
   };
-
-  const dismissError = () => setError(null);
 
   return (
-    <div className="font-['Space_Grotesk'] min-h-screen bg-black text-white overflow-y-auto">
-      {/* Background */}
-      <div 
-        className="fixed top-0 left-0 w-full h-screen bg-cover bg-center -z-20"
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1534972195531-d756b9bfa9f2?q=80&w=2070&auto=format&fit=crop')"
-        }}
-      />
-      <div className="fixed top-0 left-0 w-full h-full bg-black/75 -z-10" />
-
-      {/* Main Content */}
-      <div className="flex justify-center items-center min-h-screen py-10 px-5">
-        <div className="bg-gray-900/85 backdrop-blur-md border border-white/10 rounded-2xl p-10 w-full max-w-md text-center shadow-2xl">
-          <h1 className="text-3xl lg:text-4xl font-bold mb-3">
-            Welcome back!
-          </h1>
-          <p className="text-gray-400 mb-8">
-            Login to continue creating amazing content.
-          </p>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-900/50 border border-red-500/50 rounded-lg backdrop-blur-sm">
-              <p className="text-red-200 text-sm font-medium">
-                {AUTH_ERROR_MESSAGES[error] || AUTH_ERROR_MESSAGES.Default}
-              </p>
-              <p className="text-red-300/70 text-xs mt-1">
-                Código: {error}
-              </p>
-              <button
-                onClick={dismissError}
-                className="mt-2 text-xs text-red-300/70 hover:text-red-200 underline"
-              >
-                Dispensar
-              </button>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <div className="mb-5 text-left">
-              <label htmlFor="email" className="block mb-2 text-gray-300 font-medium">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-                className="w-full py-3 px-4 bg-gray-800 border border-gray-600 rounded-lg text-white font-['Space_Grotesk'] text-base transition-all duration-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
-              />
-            </div>
-            
-            <div className="mb-6 text-left">
-              <label htmlFor="password" className="block mb-2 text-gray-300 font-medium">
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                required
-                className="w-full py-3 px-4 bg-gray-800 border border-gray-600 rounded-lg text-white font-['Space_Grotesk'] text-base transition-all duration-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
-              />
-            </div>
-            
-            <button
-              type="submit"
-              className="w-full py-4 border-none rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white mb-5 hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/50"
-            >
-              Login
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="flex items-center text-center text-gray-500 my-6">
-            <div className="flex-1 border-b border-gray-600"></div>
-            <span className="px-2">ou</span>
-            <div className="flex-1 border-b border-gray-600"></div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+        <div>
+          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+            <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
           </div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Fazer login
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Entre para acessar sua conta
+          </p>
+        </div>
 
-          <button
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="w-full py-4 border border-gray-600 rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-3 bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                Signing in...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" viewBox="0 0 48 48">
-                  <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
-                  <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
-                  <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
-                  <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.901,35.637,44,28.718,44,20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+        {error && (
+          <div className="rounded-md bg-red-50 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
-                Sign-in with Google
-              </>
-            )}
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-800">
+                  Erro ao fazer login. Tente novamente.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-8 space-y-4">
+          <button
+            onClick={handleGoogleSignIn}
+            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+              <svg className="h-5 w-5" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+            </span>
+            Continuar com Google
           </button>
 
-          <div className="mt-5 text-sm">
-            <Link href="/forgot-password" className="text-purple-500 no-underline transition-colors duration-300 hover:text-pink-500 hover:underline">
-              Forgot your password?
-            </Link>
-            <span className="text-gray-400"> • </span>
-            <Link href="/register" className="text-purple-500 no-underline transition-colors duration-300 hover:text-pink-500 hover:underline">
-              Create an account
+          <div className="text-center">
+            <Link 
+              href="/register" 
+              className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+            >
+              Não tem uma conta? Cadastre-se
             </Link>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Carregando...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

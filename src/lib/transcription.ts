@@ -3,10 +3,19 @@ import path from 'path';
 import OpenAI from 'openai';
 import { Transcription } from 'openai/resources/audio/transcriptions';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 60000, // ADDED: Prevent infinite requests
-});
+// This function creates and returns the OpenAI client.
+// It ensures the API key is only read when the function is actually called.
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY environment variable is not set.');
+  }
+  return new OpenAI({ apiKey, timeout: 60000 });
+}
+
+// ============================================================================
+// Types and Interfaces
+// ============================================================================
 
 // Supported output formats from Whisper API
 type TranscriptionFormat = 'json' | 'text' | 'srt' | 'verbose_json' | 'vtt';
@@ -17,18 +26,22 @@ interface TranscriptionOptions {
   language?: string;
 }
 
-// ADDED: Return type depends on format for better TypeScript support
+// Return type depends on format for better TypeScript support
 type TranscriptionResult<T extends TranscriptionFormat> = 
   T extends 'verbose_json' | 'json' ? Transcription : string;
 
-// ADDED: File validation before processing
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+// File validation before processing
 function validateServerFile(filePath: string): void {
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
   }
 }
 
-// ADDED: Better error messages for common OpenAI errors
+// Better error messages for common OpenAI errors
 function handleError(error: unknown): never {
   if (error instanceof Error) {
     if (error.message.includes('rate_limit')) throw new Error('Rate limit exceeded. Try again later.');
@@ -40,7 +53,7 @@ function handleError(error: unknown): never {
 }
 
 // ============================================================================
-// Main Functions
+// Main Exported Functions
 // ============================================================================
 
 /**
@@ -52,6 +65,8 @@ export async function getTranscription<T extends TranscriptionFormat>(
 ): Promise<TranscriptionResult<T>> {
   try {
     validateServerFile(filePath);
+    
+    const openai = getOpenAIClient();
     
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(filePath),
@@ -73,6 +88,7 @@ export async function getTranscription<T extends TranscriptionFormat>(
  */
 export async function transcribeAudio(audioFile: File): Promise<string> {
   try {
+    const openai = getOpenAIClient();
     const transcription = await openai.audio.transcriptions.create({
       file: audioFile,
       model: "whisper-1",
@@ -89,6 +105,7 @@ export async function transcribeAudio(audioFile: File): Promise<string> {
  */
 export async function transcribeVideoAudio(videoFile: File): Promise<string> {
   try {
+    const openai = getOpenAIClient();
     const transcription = await openai.audio.transcriptions.create({
       file: videoFile,
       model: "whisper-1",

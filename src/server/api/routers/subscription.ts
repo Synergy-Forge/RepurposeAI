@@ -2,9 +2,16 @@ import { createTRPCRouter, protectedProcedure } from '@/lib/trpc';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-07-30.basil',
-});
+// Função para obter o cliente Stripe (só inicializa quando necessário)
+const getStripeClient = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY não está configurada');
+  }
+  
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil',
+  });
+};
 
 export const subscriptionRouter = createTRPCRouter({
   createCheckoutSession: protectedProcedure
@@ -16,6 +23,7 @@ export const subscriptionRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const stripe = getStripeClient(); // Inicializa aqui
       const userId = ctx.session.user.id;
       const { priceId, successUrl, cancelUrl } = input;
 
@@ -80,6 +88,7 @@ export const subscriptionRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const stripe = getStripeClient(); // Inicializa aqui
       const userId = ctx.session.user.id;
       const { returnUrl } = input;
 
@@ -104,6 +113,7 @@ export const subscriptionRouter = createTRPCRouter({
     }),
 
   cancelSubscription: protectedProcedure.mutation(async ({ ctx }) => {
+    const stripe = getStripeClient(); // Inicializa aqui
     const userId = ctx.session.user.id;
 
     // Get user from database
