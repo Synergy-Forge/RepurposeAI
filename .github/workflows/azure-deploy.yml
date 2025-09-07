@@ -10,48 +10,50 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.x'
-        cache: 'npm'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
 
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Run build script
-      run: |
-        chmod +x ./scripts/deploy.sh
-        ./scripts/deploy.sh
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-        STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-        NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+      - name: Run build script
+        run: |
+          chmod +x ./scripts/deploy.sh
+          ./scripts/deploy.sh
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
 
-    - name: Prepare standalone deployment
-      run: |
-        # Copy static files to standalone directory
-        cp -r .next/static .next/standalone/.next/static
-        cp -r public .next/standalone/public
-        # Copy prisma directory for database operations
-        cp -r prisma .next/standalone/
+      - name: Prepare standalone deployment
+        run: |
+          # Copy static files to standalone directory
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          # Copy prisma directory for database operations
+          cp -r prisma .next/standalone/
 
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v3
-      with:
-        app-name: 'repurposeai-webapp'
-        slot-name: 'production'
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        package: .next/standalone
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: "repurposeai-webapp"
+          slot-name: "production"
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .next/standalone
 
-    - name: Set startup command
-      run: |
-        az webapp config set --name repurposeai-webapp --resource-group repurposeai-rg --startup-file "npx prisma migrate deploy && node server.js"
+      - name: Set startup command
+        run: |
+          az webapp config set --name repurposeai-webapp --resource-group repurposeai-rg --startup-file "npx prisma migrate deploy && node server.js"
