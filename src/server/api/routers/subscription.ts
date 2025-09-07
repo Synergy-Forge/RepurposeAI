@@ -2,7 +2,6 @@ import { createTRPCRouter, protectedProcedure } from '@/lib/trpc';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
-// Função para obter o cliente Stripe (só inicializa quando necessário)
 const getStripeClient = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY não está configurada');
@@ -23,7 +22,7 @@ export const subscriptionRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const stripe = getStripeClient(); // Inicializa aqui
+      const stripe = getStripeClient();
       const userId = ctx.session.user.id;
       const { priceId, successUrl, cancelUrl } = input;
 
