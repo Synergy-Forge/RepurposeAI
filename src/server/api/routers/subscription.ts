@@ -8,7 +8,7 @@ const getStripeClient = () => {
   }
   
   return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-08-27.basil',
+    apiVersion: '2025-07-30.basil',
   });
 };
 
@@ -142,11 +142,10 @@ export const subscriptionRouter = createTRPCRouter({
       }
     );
 
-    // Update user subscription status
+    // Update user subscription end date (status will be updated by webhook when subscription ends)
     await ctx.prisma.user.update({
       where: { id: userId },
       data: {
-        subscriptionStatus: 'free',
         subscriptionEndDate: subscription.cancel_at_period_end
           ? new Date((subscription.cancel_at as number) * 1000)
           : null,

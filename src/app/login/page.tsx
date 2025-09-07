@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { signIn } from "next-auth/react";
 import { useSearchParams } from 'next/navigation';
@@ -14,7 +14,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   Default: 'An unexpected error occurred during authentication.'
 };
 
-export default function LoginPage() {
+function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
@@ -38,9 +38,8 @@ export default function LoginPage() {
   const dismissError = () => setError(null);
 
   return (
-    // Main container with dark theme
     <div className="min-h-screen bg-black text-white flex justify-center items-center p-4">
-      
+
       {/* Central login card with the dark, modern style */}
       <div className="bg-gray-900/85 backdrop-blur-md border border-white/10 rounded-2xl p-8 sm:p-10 w-full max-w-md text-center shadow-2xl">
         <h1 className="text-3xl lg:text-4xl font-bold mb-3">
@@ -96,6 +95,21 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex justify-center items-center p-4">
+        <div className="bg-gray-900/85 backdrop-blur-md border border-white/10 rounded-2xl p-8 sm:p-10 w-full max-w-md text-center shadow-2xl">
+          <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
 

@@ -7,7 +7,7 @@ interface UserState {
     name: string;
     email: string;
     image: string;
-    subscriptionStatus: 'free' | 'starter' | 'pro';
+    subscriptionStatus: 'free' | 'starter' | 'creator' | 'producer';
   } | null;
   setUser: (user: UserState['user']) => void;
   clearUser: () => void;
