@@ -25,9 +25,37 @@ export default function RegisterPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Registration attempt:', formData);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+        setFormData({ name: '', email: '', password: '' });
+      } else {
+        setError(data.error || 'Registration failed');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleRegister = () => {
@@ -55,6 +83,22 @@ export default function RegisterPage() {
           <p className="text-gray-400 mb-8">
             It is quick and easy.
           </p>
+
+          {/* Success Message */}
+          {success && (
+            <div className="mb-6 p-4 bg-green-900/50 border border-green-500/50 rounded-lg text-left">
+              <p className="text-green-200 text-sm font-medium">
+                Account created successfully! A confirmation email should arrive soon.
+              </p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-900/50 border border-red-500/50 rounded-lg text-left">
+              <p className="text-red-200 text-sm font-medium">{error}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="mb-5 text-left">
@@ -104,9 +148,17 @@ export default function RegisterPage() {
             
             <button
               type="submit"
-              className="w-full py-4 border-none rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white mb-5 hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/50"
+              disabled={loading}
+              className="w-full py-4 border-none rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white mb-5 hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign-up
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Creating account...
+                </>
+              ) : (
+                'Sign-up'
+              )}
             </button>
           </form>
 

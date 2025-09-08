@@ -17,6 +17,8 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
 function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const searchParams = useSearchParams();
 
   // Effect to read and display any authentication errors from the URL
@@ -26,6 +28,28 @@ function LoginForm() {
       setError(AUTH_ERROR_MESSAGES[errorParam] || AUTH_ERROR_MESSAGES.Default);
     }
   }, [searchParams]);
+
+  // Credentials Login handler
+  const handleCredentialsLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const result = await signIn('credentials', {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setError('Invalid email or password');
+    } else if (result?.ok) {
+      // Redirect to dashboard on success
+      window.location.href = '/dashboard';
+    }
+
+    setLoading(false);
+  };
 
   // Simplified Google Login handler
   const handleGoogleLogin = async () => {
@@ -61,6 +85,44 @@ function LoginForm() {
             </button>
           </div>
         )}
+
+        {/* Email and Password Form */}
+        <form onSubmit={handleCredentialsLogin} className="mb-6">
+          <div className="mb-4">
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+          </div>
+          <div className="mb-6">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors duration-300 mb-4"
+          >
+            {loading ? 'Signing in...' : 'Sign in with Email'}
+          </button>
+        </form>
+
+        {/* Divider */}
+        <div className="flex items-center mb-6">
+          <div className="flex-1 border-t border-gray-600"></div>
+          <span className="px-3 text-gray-400 text-sm">or</span>
+          <div className="flex-1 border-t border-gray-600"></div>
+        </div>
 
         {/* Sign-in with Google Button */}
         <button
@@ -112,4 +174,3 @@ export default function LoginPage() {
     </Suspense>
   );
 }
-

@@ -43,6 +43,7 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  password      String?   // Hashed password for email/password authentication
   stripeCustomerId String? @unique
   subscriptionStatus String @default("free") // free, starter, creator, producer
   subscriptionEndDate DateTime?
