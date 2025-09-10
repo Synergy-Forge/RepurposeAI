@@ -43,8 +43,9 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  password      String?
   stripeCustomerId String? @unique
-  subscriptionStatus String @default("free") // free, starter, pro
+  subscriptionStatus String @default("free")
   subscriptionEndDate DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

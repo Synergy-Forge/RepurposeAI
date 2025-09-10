@@ -3,6 +3,7 @@ import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { TRPCReactProvider } from "@/components/providers/trpc-provider";
+import { TranslationProvider } from "@/lib/i18n";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -29,11 +30,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${spaceGrotesk.className} antialiased`}>
-        <SessionProvider>
-          <TRPCReactProvider>
-            {children}
-          </TRPCReactProvider>
-        </SessionProvider>
+        <TranslationProvider>
+          <SessionProvider>
+            <TRPCReactProvider>
+              {children}
+            </TRPCReactProvider>
+          </SessionProvider>
+        </TranslationProvider>
       </body>
     </html>
   );

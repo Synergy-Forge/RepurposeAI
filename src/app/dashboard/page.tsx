@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import { Video } from '@/lib/types';
 import { signIn, signOut } from 'next-auth/react';
 
 export default function HomePage() {
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
@@ -38,7 +40,7 @@ export default function HomePage() {
     if (file && file.type.startsWith('/video')) {
       setVideoFile(file);
     } else {
-      toast.error('Please select a valid video file');
+      toast.error(t('dashboard.selectVideo'));
     }
   };
 

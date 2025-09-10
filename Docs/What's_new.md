@@ -289,3 +289,76 @@ This setup significantly improves our development process by:
 - **I've also configured ZeptoMail as our transactional email provider. This will handle all system notifications like sign-ups, password resets, and job completion alerts.**
 
 **This is a crucial first step towards building a backend that can handle long-running video processing jobs reliably.**
+
+# Hatus Batista - (09/09/2025)
+
+### Enhanced Authentication System: Email/Password Login and Registration
+
+We have significantly improved our authentication capabilities by adding robust email/password authentication alongside our existing Google OAuth. This enhancement provides users with more flexibility in how they access RepurposeAI while maintaining the highest standards of security and user experience.
+
+## New Authentication Features
+
+### 🔐 Email/Password Authentication
+- **CredentialsProvider Integration**: Added NextAuth CredentialsProvider for secure email/password login
+- **Password Security**: Implemented bcrypt hashing with 10 salt rounds for secure password storage and verification
+- **User Registration**: Created comprehensive registration API route with proper validation and error handling
+
+### 📝 Database Enhancements
+- **Prisma Schema Update**: Added password field to the User model to support credential-based authentication
+- **Database Migration**: Generated and applied migration to update the production database schema seamlessly
+
+### 🎨 UI/UX Improvements
+- **Login Page Enhancement**: Redesigned login page with email/password form, including loading states and comprehensive error handling
+- **Registration Page**: Enhanced registration flow with success messages, form validation, and user feedback
+- **User Experience**: Added loading spinners, success/error notifications, and intuitive form interactions
+
+### 🔧 Technical Implementation Details
+- **Security Measures**: All passwords are hashed using bcrypt before storage, ensuring data protection
+- **Validation Logic**: Implemented email uniqueness checks during registration to prevent duplicate accounts
+- **Error Handling**: Comprehensive error messages for various authentication scenarios (invalid credentials, registration failures, etc.)
+- **Code Quality**: Maintained high code standards with proper linting and type safety
+
+### ✅ Key Features Delivered
+- **Seamless Registration**: Users can now register with email, name, and password
+- **Secure Login**: Credential-based login using email and password
+- **Dual Authentication**: Maintained existing Google OAuth functionality for user choice
+- **Robust Error Handling**: Clear feedback for all authentication states
+- **Success Confirmation**: Registration success with email confirmation notice
+
+This update strengthens our authentication system, providing users with multiple secure login options while ensuring data integrity and a smooth user experience. The implementation follows industry best practices for password security and user authentication flows.
+
+## Transactional Email System Implementation
+
+We have successfully implemented a transactional email system using ZeptoMail for secure magic link authentication. This enhancement provides users with passwordless sign-in capabilities and improves the overall authentication experience.
+
+### Email Provider Integration
+- **ZeptoMail SMTP**: Configured SMTP server for reliable email delivery
+- **Magic Link Authentication**: Users can sign in with just their email address
+- **Custom Email Templates**: Professional HTML and text email templates for sign-in links
+- **Error Handling**: Comprehensive error handling for email delivery failures
+
+### Technical Implementation Details
+- **Nodemailer Integration**: Used nodemailer for SMTP email sending
+- **Environment Configuration**: Secure SMTP credentials stored in environment variables
+- **Custom sendVerificationRequest**: Implemented custom email sending function for NextAuth
+- **Responsive Email Design**: Mobile-friendly HTML email templates
+
+### Key Features Delivered
+- **Passwordless Sign-in**: Users receive secure magic links via email
+- **Multiple Authentication Methods**: Support for email, Google OAuth, and credentials
+- **Professional Email Templates**: Branded emails with clear call-to-action buttons
+- **Fallback Text Version**: Plain text email content for accessibility
+- **Secure Link Generation**: Time-limited verification tokens
+
+### Configuration Requirements
+To enable the transactional email system, add the following environment variables to your `.env` file:
+
+```env
+EMAIL_SERVER_HOST="smtp.zeptomail.com"
+EMAIL_SERVER_PORT="587"
+EMAIL_SERVER_USER="your-zeptomail-smtp-username"
+EMAIL_SERVER_PASSWORD="your-zeptomail-smtp-password"
+EMAIL_FROM="noreply@yourdomain.com"
+```
+
+This implementation provides a robust, scalable email system that enhances user security and simplifies the authentication process.
