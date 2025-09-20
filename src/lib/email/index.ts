@@ -1,7 +1,7 @@
 import { User } from '@prisma/client';
-import { ZeptoMailProvider, EmailOptions, EmailResult } from './providers/zeptomail';
+import { ZeptoMailProvider, EmailOptions } from './providers/zeptomail';
 import { EmailQueue } from './queue';
-import { EmailType, EmailTemplateData, EmailStatus } from './types';
+import { EmailType, EmailTemplateData } from './types';
 import { getEmailConfig } from './config';
 
 export class EmailService {
@@ -57,7 +57,12 @@ export class EmailService {
   async sendProcessingEmail(
     type: 'started' | 'complete' | 'failed',
     userId: string,
-    videoData: any
+    videoData: {
+      title: string;
+      duration: number;
+      clipsGenerated: number;
+      downloadUrl: string;
+    }
   ): Promise<boolean> {
     const emailType = type === 'started'
       ? EmailType.PROCESSING_STARTED
@@ -82,7 +87,11 @@ export class EmailService {
   async sendSubscriptionEmail(
     type: 'activated' | 'upgraded' | 'downgraded' | 'cancelled',
     userId: string,
-    subscriptionData: any
+    subscriptionData: {
+      planName: string;
+      amount: number;
+      nextBillingDate: string;
+    }
   ): Promise<boolean> {
     const emailTypeMap = {
       activated: EmailType.SUBSCRIPTION_ACTIVATED,

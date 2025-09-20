@@ -9,7 +9,7 @@ interface ProcessingCompleteEmailProps {
 
 export const ProcessingCompleteEmail: React.FC<ProcessingCompleteEmailProps> = ({ data }) => {
   return (
-    <BaseTemplate previewText="Your video clips are ready! ✨">
+    <BaseTemplate _previewText="Your video clips are ready! ✨">
       <Section style={hero}>
         <Img
           src="https://re-purpose.studio/icons/success.png"
@@ -20,13 +20,13 @@ export const ProcessingCompleteEmail: React.FC<ProcessingCompleteEmailProps> = (
         />
         <Text style={heading}>Your clips are ready! ✨</Text>
         <Text style={subheading}>
-          Great news! Your video "{data.video?.title}" has been processed successfully.
+          Great news! Your video &quot;{data.video?.title}&quot; has been processed successfully.
         </Text>
       </Section>
 
       <Section style={content}>
         <Text style={text}>
-          We've created <strong>{data.video?.clipsGenerated} amazing clips</strong> from your video,
+          We&apos;ve created <strong>{data.video?.clipsGenerated} amazing clips</strong> from your video,
           optimized for different social media platforms.
         </Text>
 

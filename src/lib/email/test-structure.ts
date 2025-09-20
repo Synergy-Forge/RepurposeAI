@@ -35,7 +35,7 @@ async function testEmailStructure() {
     console.log('📧 Testing template rendering...');
 
     // Welcome Email
-    const welcomeHtml = render(WelcomeEmail({ data: testData }));
+    const welcomeHtml = await render(WelcomeEmail({ data: testData }) as React.ReactElement);
     console.log('✅ Welcome email template renders successfully');
     console.log(`📄 Welcome email length: ${welcomeHtml.length} characters`);
 
@@ -49,7 +49,7 @@ async function testEmailStructure() {
         downloadUrl: 'https://re-purpose.studio/download/test',
       },
     };
-    const processingHtml = render(ProcessingCompleteEmail({ data: processingData }));
+    const processingHtml = await render(ProcessingCompleteEmail({ data: processingData }) as React.ReactElement);
     console.log('✅ Processing complete email template renders successfully');
     console.log(`📄 Processing email length: ${processingHtml.length} characters`);
 
@@ -62,7 +62,7 @@ async function testEmailStructure() {
         nextBillingDate: '2024-02-01',
       },
     };
-    const subscriptionHtml = render(SubscriptionActivatedEmail({ data: subscriptionData }));
+    const subscriptionHtml = await render(SubscriptionActivatedEmail({ data: subscriptionData }) as React.ReactElement);
     console.log('✅ Subscription email template renders successfully');
     console.log(`📄 Subscription email length: ${subscriptionHtml.length} characters`);
 
@@ -77,7 +77,7 @@ async function testEmailStructure() {
     try {
       await emailService.sendEmail(EmailType.WELCOME, 'test-user-id', testData);
       console.log('❌ Configuration validation failed - should have thrown error');
-    } catch (error) {
+    } catch {
       console.log('✅ Configuration validation working correctly - requires environment variables');
     }
 

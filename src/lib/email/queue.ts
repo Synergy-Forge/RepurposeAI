@@ -1,5 +1,5 @@
-import { EmailLog } from '@prisma/client';
-import { QueuedEmail, EmailTemplateData, EmailType, EmailStatus } from './types';
+
+import { QueuedEmail, EmailLog } from './types';
 
 export interface QueueStats {
   queued: number;

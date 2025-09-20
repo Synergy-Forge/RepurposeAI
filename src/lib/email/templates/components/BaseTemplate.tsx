@@ -3,12 +3,12 @@ import { Html, Head, Body, Container, Section, Text, Hr, Link } from '@react-ema
 
 interface BaseTemplateProps {
   children: React.ReactNode;
-  previewText?: string;
+  _previewText?: string;
 }
 
 export const BaseTemplate: React.FC<BaseTemplateProps> = ({
   children,
-  previewText = 'Repurpose AI Notification'
+  _previewText ='Repurpose AI Notification'
 }) => {
   return (
     <Html>

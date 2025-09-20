@@ -9,7 +9,7 @@ interface SubscriptionActivatedEmailProps {
 
 export const SubscriptionActivatedEmail: React.FC<SubscriptionActivatedEmailProps> = ({ data }) => {
   return (
-    <BaseTemplate previewText="Welcome to your new plan! 🎉">
+    <BaseTemplate _previewText="Welcome to your new plan! 🎉">
       <Section style={hero}>
         <Img
           src="https://re-purpose.studio/icons/celebration.png"
@@ -48,7 +48,7 @@ export const SubscriptionActivatedEmail: React.FC<SubscriptionActivatedEmailProp
       </Section>
 
       <Section style={features}>
-        <Text style={featuresTitle}>✨ What's included in your plan:</Text>
+        <Text style={featuresTitle}>✨ What&apos;s included in your plan:</Text>
         <Text style={featuresText}>
           • Unlimited video processing
         </Text>
@@ -71,7 +71,7 @@ export const SubscriptionActivatedEmail: React.FC<SubscriptionActivatedEmailProp
 
       <Section style={support}>
         <Text style={supportText}>
-          Questions about your subscription? We're here to help at{' '}
+          Questions about your subscription? We&apos;re here to help at{' '}
           <a href={`mailto:${data.supportUrl}`} style={supportLink}>
             support@re-purpose.studio
           </a>

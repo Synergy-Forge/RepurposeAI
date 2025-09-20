@@ -5,7 +5,7 @@ export interface EmailOptions {
   subject: string;
   html: string;
   from?: string;
-  attachments?: any[];
+  attachments?: { filename: string; content: string | Buffer }[];
 }
 
 export interface EmailResult {

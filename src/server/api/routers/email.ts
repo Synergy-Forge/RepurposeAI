@@ -16,7 +16,7 @@ const templatePreviewSchema = z.object({
 });
 
 export const emailRouter = createTRPCRouter({
-  getUserPreferences: protectedProcedure.query(async ({ ctx }) => {
+  getUserPreferences: protectedProcedure.query(async ({ ctx: _ctx }) => {
     // This would query the database for user preferences
     // For now, return default preferences
     return {
@@ -29,20 +29,20 @@ export const emailRouter = createTRPCRouter({
 
   updatePreferences: protectedProcedure
     .input(emailPreferencesSchema)
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx: _ctx, input }) => {
       // This would update the database
       console.log('Updating email preferences:', input);
       return { success: true };
     }),
 
-  getEmailHistory: protectedProcedure.query(async ({ ctx }) => {
+  getEmailHistory: protectedProcedure.query(async ({ ctx: _ctx }) => {
     // This would query the database for email history
     return [];
   }),
 
   resendEmail: protectedProcedure
     .input(z.object({ emailLogId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx: _ctx, input }) => {
       // This would resend an email from the log
       console.log('Resending email:', input.emailLogId);
       return { success: true };
@@ -50,7 +50,7 @@ export const emailRouter = createTRPCRouter({
 
   unsubscribe: publicProcedure
     .input(z.object({ token: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx: _ctx, input }) => {
       // This would handle unsubscribe requests
       console.log('Unsubscribe request:', input.token);
       return { success: true };
@@ -58,7 +58,7 @@ export const emailRouter = createTRPCRouter({
 
   previewTemplate: protectedProcedure
     .input(templatePreviewSchema)
-    .query(async ({ ctx, input }) => {
+    .query(async ({ ctx: _ctx, input }) => {
       // This would generate a preview of the email template
       const emailService = new EmailService();
       const data = {
