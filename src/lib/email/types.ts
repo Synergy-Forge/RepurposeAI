@@ -64,3 +64,14 @@ export interface QueuedEmail {
   scheduledFor?: Date;
   priority?: number;
 }
+
+export interface EmailLog {
+  id: string;
+  userId: string;
+  email: string;
+  type: EmailType;
+  status: EmailStatus;
+  error?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
