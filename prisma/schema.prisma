@@ -1,58 +1,86 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
-//Use comments dashs whenever you need to test it localy
+
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") 
+  url      = env("DATABASE_URL")
 }
 
 model Account {
-  id                String  @id @default(cuid())
+  id                String  @id
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
+model EmailLog {
+  id          String    @id
+  userId      String?
+  email       String
+  type        String
+  status      String
+  subject     String
+  error       String?
+  sentAt      DateTime  @default(now())
+  deliveredAt DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  metadata    Json?
+  User        User?     @relation(fields: [userId], references: [id])
+
+  @@index([sentAt])
+  @@index([status])
+  @@index([type])
+  @@index([userId])
+}
+
+model EmailPreference {
+  id                   String  @id
+  userId               String  @unique
+  marketingEmails      Boolean @default(true)
+  processingUpdates    Boolean @default(true)
+  weeklyDigest         Boolean @default(true)
+  featureAnnouncements Boolean @default(true)
+  User                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model Session {
-  id           String   @id @default(cuid())
+  id           String   @id
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?   // Hashed password for email/password authentication
-  stripeCustomerId String? @unique
-  subscriptionStatus String @default("free") // free, starter, creator, producer
+  id                  String           @id
+  name                String?
+  email               String?          @unique
+  emailVerified       DateTime?
+  image               String?
+  stripeCustomerId    String?          @unique
+  subscriptionStatus  String           @default("free")
   subscriptionEndDate DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  accounts Account[]
-  sessions Session[]
-  videos   Video[]
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime
+  password            String?
+  Account             Account[]
+  EmailLog            EmailLog[]
+  EmailPreference     EmailPreference?
+  Session             Session[]
+  Video               Video[]
 }
 
 model VerificationToken {
@@ -64,32 +92,30 @@ model VerificationToken {
 }
 
 model Video {
-  id          String      @id @default(cuid())
+  id          String      @id
   title       String
   description String?
   originalUrl String
-  duration    Int? // in seconds
-  status      String      @default("uploading") // uploading, processing, completed, failed
+  duration    Int?
+  status      String      @default("uploading")
   userId      String
   createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clips  VideoClip[]
+  updatedAt   DateTime
+  User        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  VideoClip   VideoClip[]
 }
 
 model VideoClip {
-  id          String   @id @default(cuid())
+  id          String   @id
   title       String
   description String?
-  startTime   Int      // in seconds
-  endTime     Int      // in seconds
-  aspectRatio String   // 9:16, 1:1, 16:9
+  startTime   Int
+  endTime     Int
+  aspectRatio String
   videoUrl    String
   captions    String?
   hashtags    String?
   videoId     String
   createdAt   DateTime @default(now())
-
-  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  Video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 }
