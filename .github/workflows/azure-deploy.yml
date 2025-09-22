@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - preview  # Add preview branch for testing
 
 jobs:
   build-and-deploy:
@@ -25,16 +24,6 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # ADD THIS STEP: Install dependencies first
-      - name: Install dependencies
-        run: npm ci
-
-      # ADD THIS STEP: Run database migrations before build
-      - name: Run Database Migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
       - name: Run build script
         run: |
           chmod +x ./scripts/deploy.sh
@@ -48,12 +37,15 @@ jobs:
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          # ADD EMAIL VARIABLES WHEN READY
-          # ZEPTOMAIL_FROM_EMAIL: ${{ secrets.ZEPTOMAIL_FROM_EMAIL }}
-          # ZEPTOMAIL_SMTP_HOST: ${{ secrets.ZEPTOMAIL_SMTP_HOST }}
-          # ZEPTOMAIL_SMTP_PORT: ${{ secrets.ZEPTOMAIL_SMTP_PORT }}
-          # ZEPTOMAIL_SMTP_USER: ${{ secrets.ZEPTOMAIL_SMTP_USER }}
-          # ZEPTOMAIL_SMTP_PASS: ${{ secrets.ZEPTOMAIL_SMTP_PASS }}
+          # Email environment variables
+          ZEPTOMAIL_FROM_EMAIL: ${{ secrets.ZEPTOMAIL_FROM_EMAIL }}
+          ZEPTOMAIL_SMTP_HOST: ${{ secrets.ZEPTOMAIL_SMTP_HOST }}
+          ZEPTOMAIL_SMTP_PORT: ${{ secrets.ZEPTOMAIL_SMTP_PORT }}
+          ZEPTOMAIL_SMTP_USER: ${{ secrets.ZEPTOMAIL_SMTP_USER }}
+          ZEPTOMAIL_SMTP_PASS: ${{ secrets.ZEPTOMAIL_SMTP_PASS }}
+          FROM_NAME: ${{ secrets.FROM_NAME }}
+          SUPPORT_EMAIL: ${{ secrets.SUPPORT_EMAIL }}
+          WEBAPP_URL: ${{ secrets.WEBAPP_URL }}
 
       - name: Prepare standalone deployment
         run: |
@@ -63,17 +55,14 @@ jobs:
           # Copy prisma directory for database operations
           cp -r prisma .next/standalone/
 
-      # MODIFY THIS STEP: Deploy to correct slot based on branch
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: "repurposeai-webapp"
-          slot-name: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
-          publish-profile: ${{ github.ref == 'refs/heads/main' && secrets.AZURE_WEBAPP_PUBLISH_PROFILE || secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PREVIEW }}
+          slot-name: "production"
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: .next/standalone
 
-      # UPDATE THIS STEP: Remove migration from startup (already done above)
       - name: Set startup command
         run: |
-          SLOT_NAME=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
-          az webapp config set --name repurposeai-webapp --resource-group repurposeai-rg --slot $SLOT_NAME --startup-file "node server.js"
+          az webapp config set --name repurposeai-webapp --resource-group repurposeai-rg --startup-file "npx prisma migrate deploy && node server.js"
