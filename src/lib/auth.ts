@@ -99,6 +99,19 @@ export const authOptions: NextAuthOptions = {
 
           if (existingAccount) {
             console.log('[AUTH] Found existing account link for user:', existingAccount.userId);
+            
+            // Additional safety check - verify the user still exists and email matches
+            const linkedUser = await prisma.user.findUnique({
+              where: { id: existingAccount.userId },
+              select: { email: true }
+            });
+
+            if (!linkedUser || linkedUser.email !== user.email) {
+              console.error('[AUTH] Email mismatch or user not found for existing account');
+              return false;
+            }
+            
+            console.log('[AUTH] Successfully verified user email match');
             return true;
           }
 
@@ -186,11 +199,27 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
-      return baseUrl + "/dashboard"
+      console.log('[AUTH] Redirect triggered:', { url, baseUrl });
+      
+      // After sign in, always redirect to dashboard
+      if (url.includes('/api/auth/callback')) {
+        console.log('[AUTH] Redirecting to dashboard after sign in');
+        return `${baseUrl}/dashboard`;
+      }
+
+      // Default NextAuth.js redirect behavior for other cases
+      if (url.startsWith("/")) {
+        console.log('[AUTH] Redirecting to relative URL:', url);
+        return `${baseUrl}${url}`;
+      }
+      
+      if (new URL(url).origin === baseUrl) {
+        console.log('[AUTH] Redirecting to same-origin URL:', url);
+        return url;
+      }
+
+      console.log('[AUTH] Fallback redirect to dashboard');
+      return `${baseUrl}/dashboard`;
     }
   },
 
