@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import "@/styles/landing.css";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { TRPCReactProvider } from "@/components/providers/trpc-provider";
 
