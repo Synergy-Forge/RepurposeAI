@@ -65,7 +65,7 @@ model Session {
 }
 
 model User {
-  id                  String           @id
+  id                  String           @id @default(cuid())
   name                String?
   email               String?          @unique
   emailVerified       DateTime?
@@ -74,7 +74,7 @@ model User {
   subscriptionStatus  String           @default("free")
   subscriptionEndDate DateTime?
   createdAt           DateTime         @default(now())
-  updatedAt           DateTime
+  updatedAt           DateTime         @updatedAt
   password            String?
   Account             Account[]
   EmailLog            EmailLog[]
@@ -92,7 +92,7 @@ model VerificationToken {
 }
 
 model Video {
-  id          String      @id
+  id          String      @id @default(cuid())
   title       String
   description String?
   originalUrl String
@@ -100,13 +100,13 @@ model Video {
   status      String      @default("uploading")
   userId      String
   createdAt   DateTime    @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime    @updatedAt
   User        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   VideoClip   VideoClip[]
 }
 
 model VideoClip {
-  id          String   @id
+  id          String   @id @default(cuid())
   title       String
   description String?
   startTime   Int

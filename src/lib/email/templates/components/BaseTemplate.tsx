@@ -8,7 +8,7 @@ interface BaseTemplateProps {
 
 export const BaseTemplate: React.FC<BaseTemplateProps> = ({
   children,
-  previewText = 'Repurpose AI Notification'
+  previewText: _previewText = 'Repurpose AI Notification'
 }) => {
   return (
     <Html>
