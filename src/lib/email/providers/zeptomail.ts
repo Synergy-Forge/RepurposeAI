@@ -1,11 +1,18 @@
 import nodemailer from 'nodemailer';
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+  encoding?: string;
+}
+
 export interface EmailOptions {
   to: string;
   subject: string;
   html: string;
   from?: string;
-  attachments?: { filename: string; content: string | Buffer }[];
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailResult {

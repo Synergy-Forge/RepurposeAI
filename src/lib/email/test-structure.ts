@@ -35,7 +35,8 @@ async function testEmailStructure() {
     console.log('📧 Testing template rendering...');
 
     // Welcome Email
-    const welcomeHtml = await render(WelcomeEmail({ data: testData }) as React.ReactElement);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const welcomeHtml = await (render as any)(WelcomeEmail({ data: testData }));
     console.log('✅ Welcome email template renders successfully');
     console.log(`📄 Welcome email length: ${welcomeHtml.length} characters`);
 
@@ -49,7 +50,8 @@ async function testEmailStructure() {
         downloadUrl: 'https://re-purpose.studio/download/test',
       },
     };
-    const processingHtml = await render(ProcessingCompleteEmail({ data: processingData }) as React.ReactElement);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processingHtml = await (render as any)(ProcessingCompleteEmail({ data: processingData }));
     console.log('✅ Processing complete email template renders successfully');
     console.log(`📄 Processing email length: ${processingHtml.length} characters`);
 
@@ -62,7 +64,8 @@ async function testEmailStructure() {
         nextBillingDate: '2024-02-01',
       },
     };
-    const subscriptionHtml = await render(SubscriptionActivatedEmail({ data: subscriptionData }) as React.ReactElement);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subscriptionHtml = await (render as any)(SubscriptionActivatedEmail({ data: subscriptionData }));
     console.log('✅ Subscription email template renders successfully');
     console.log(`📄 Subscription email length: ${subscriptionHtml.length} characters`);
 

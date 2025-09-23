@@ -57,12 +57,7 @@ export class EmailService {
   async sendProcessingEmail(
     type: 'started' | 'complete' | 'failed',
     userId: string,
-    videoData: {
-      title: string;
-      duration: number;
-      clipsGenerated: number;
-      downloadUrl: string;
-    }
+    videoData: { title: string; duration: number; clipsGenerated: number; downloadUrl: string }
   ): Promise<boolean> {
     const emailType = type === 'started'
       ? EmailType.PROCESSING_STARTED
@@ -87,11 +82,7 @@ export class EmailService {
   async sendSubscriptionEmail(
     type: 'activated' | 'upgraded' | 'downgraded' | 'cancelled',
     userId: string,
-    subscriptionData: {
-      planName: string;
-      amount: number;
-      nextBillingDate: string;
-    }
+    subscriptionData: { planName: string; amount: number; nextBillingDate: string; gracePeriodEnd?: string }
   ): Promise<boolean> {
     const emailTypeMap = {
       activated: EmailType.SUBSCRIPTION_ACTIVATED,

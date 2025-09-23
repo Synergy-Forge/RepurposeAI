@@ -1,5 +1,4 @@
-
-import { QueuedEmail, EmailLog } from './types';
+import { QueuedEmail } from './types';
 
 export interface QueueStats {
   queued: number;
@@ -52,7 +51,7 @@ export class EmailQueue {
     console.log(`Sending email: ${email.type} to ${email.email}`);
   }
 
-  async retry(failedEmail: EmailLog): Promise<void> {
+  async retry(failedEmail: { id: string; email: string; type: string }): Promise<void> {
     // Implement retry logic for failed emails
     console.log(`Retrying email: ${failedEmail.id}`);
   }

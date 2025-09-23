@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { trpc } from '@/lib/trpc-client';
 import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
-import { Video } from '@/lib/types';
+
 import { signIn, signOut } from 'next-auth/react';
 
 export default function HomePage() {
@@ -267,7 +267,8 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                 {getUserVideosQuery.data.map((video: Video) => (
+                                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                 {getUserVideosQuery.data.map((video: any) => (
                    <Card key={video.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                      <CardContent className="p-4">
                        <div className="space-y-2">
@@ -278,7 +279,7 @@ export default function HomePage() {
                              {video.status}
                            </Badge>
                            <span className="text-xs text-muted-foreground">
-                             {video.clips.length} clips
+                             {video.VideoClip.length} clips
                            </span>
                          </div>
                          {video.status === 'completed' && (

@@ -132,7 +132,7 @@ export const videoRouter = createTRPCRouter({
     const videos = await ctx.prisma.video.findMany({
       where: { userId },
       include: {
-        clips: true,
+        VideoClip: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -152,7 +152,7 @@ export const videoRouter = createTRPCRouter({
           userId,
         },
         include: {
-          clips: true,
+          VideoClip: true,
         },
       });
 
