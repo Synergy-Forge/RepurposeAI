@@ -9,7 +9,7 @@ interface WelcomeEmailProps {
 
 export const WelcomeEmail: React.FC<WelcomeEmailProps> = ({ data }) => {
   return (
-    <BaseTemplate _previewText="Welcome to Repurpose AI! 🎬">
+    <BaseTemplate previewText="Welcome to Repurpose AI! 🎬">
       <Section style={hero}>
         <Img
           src="https://re-purpose.studio/logo.png"
