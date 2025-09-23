@@ -15,7 +15,7 @@ export default function VideoDetailsPage() {
   const { data: video, isLoading, error } = trpc.video.getVideoWithClips.useQuery(
     { videoId },
     { enabled: !!videoId }
-  );
+  ) as { data: any; isLoading: boolean; error: any }; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const handleDownload = (clipUrl: string, title: string, aspectRatio: string) => {
     // Create a temporary link to download the video
@@ -108,13 +108,13 @@ export default function VideoDetailsPage() {
         </Card>
 
         {/* Video Clips */}
-        {video.clips.length > 0 ? (
+        {video.VideoClip.length > 0 ? (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Generated Clips</h2>
             
             {/* Group clips by title */}
-            {Array.from(new Set(video.clips.map(clip => clip.title))).map((title) => {
-              const clipsForTitle = video.clips.filter(clip => clip.title === title);
+            {(Array.from(new Set(video.VideoClip.map(clip => clip.title))) as string[]).map((title: string) => {
+              const clipsForTitle = video.VideoClip.filter(clip => clip.title === title);
               const firstClip = clipsForTitle[0];
               
               return (
