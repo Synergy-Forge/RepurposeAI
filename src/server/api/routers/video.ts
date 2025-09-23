@@ -35,11 +35,13 @@ export const videoRouter = createTRPCRouter({
         // Create video record in database
         const video = await ctx.prisma.video.create({
           data: {
+            id: randomUUID(),
             title,
             description,
             originalUrl: videoPath,
             userId,
             status: 'uploading',
+            updatedAt: new Date(),
           },
         });
 
@@ -132,7 +134,7 @@ export const videoRouter = createTRPCRouter({
     const videos = await ctx.prisma.video.findMany({
       where: { userId },
       include: {
-        VideoClip: true,
+        videoClips: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -152,7 +154,7 @@ export const videoRouter = createTRPCRouter({
           userId,
         },
         include: {
-          VideoClip: true,
+          videoClips: true,
         },
       });
 
