@@ -4,6 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from './prisma';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 // Environment Variable Validation
 if (!process.env.GOOGLE_CLIENT_ID) {
@@ -92,7 +93,7 @@ export const authOptions: NextAuthOptions = {
 
           if (!existingUser) {
             console.log('[AUTH] Creating new user:', user.email);
-            await prisma.user.create({
+            const newUser = await prisma.user.create({
               data: {
                 email: user.email,
                 name: user.name || '',
@@ -100,9 +101,63 @@ export const authOptions: NextAuthOptions = {
                 emailVerified: new Date(),
               }
             });
-            console.log('[AUTH] User created successfully');
+            console.log('[AUTH] User created successfully:', newUser.id);
+
+            // Check if account already exists
+            const existingAccount = await prisma.account.findFirst({
+              where: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              }
+            });
+
+            if (!existingAccount) {
+              // Create the account link
+              await prisma.account.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  userId: newUser.id,
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  access_token: account.access_token ?? null,
+                  expires_at: account.expires_at ?? null,
+                  token_type: account.token_type ?? null,
+                  scope: account.scope ?? null,
+                  id_token: account.id_token ?? null,
+                }
+              });
+              console.log('[AUTH] Account linked successfully');
+            }
           } else {
             console.log('[AUTH] Existing user found:', existingUser.id);
+            
+            // Check if account already exists
+            const existingAccount = await prisma.account.findFirst({
+              where: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              }
+            });
+
+            if (!existingAccount) {
+              // Link the Google account
+              await prisma.account.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  userId: existingUser.id,
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  access_token: account.access_token ?? null,
+                  expires_at: account.expires_at ?? null,
+                  token_type: account.token_type ?? null,
+                  scope: account.scope ?? null,
+                  id_token: account.id_token ?? null,
+                }
+              });
+              console.log('[AUTH] Account linked to existing user');
+            }
           }
         }
         return true;
