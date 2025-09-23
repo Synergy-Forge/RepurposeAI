@@ -279,7 +279,7 @@ export default function HomePage() {
                              {video.status}
                            </Badge>
                            <span className="text-xs text-muted-foreground">
-                             {video.VideoClip.length} clips
+                             {video.videoClips.length} clips
                            </span>
                          </div>
                          {video.status === 'completed' && (

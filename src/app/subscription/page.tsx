@@ -64,12 +64,12 @@ export default function SubscriptionPage() {
         'Watermark included',
         'Basic support',
       ],
-      priceId: { month: 'prod_SxOsuRR6DuxTer', year: 'prod_SxOsuRR6DuxTer' }, // Stripe price IDs (same for free)
+      priceId: { month: process.env.NEXT_PUBLIC_STRIPE_FREE_PRICE_ID, year: process.env.NEXT_PUBLIC_STRIPE_FREE_PRICE_ID },
       popular: false,
     },
     {
       name: 'Starter',
-      price: { month: '$9.99', year: '$99' }, // 17% discount approx for yearly
+      price: { month: '$9.99', year: '$99' },
       period: { month: '/month', year: '/year' },
       features: [
         'Export videos in Full HD 1080p',
@@ -78,12 +78,15 @@ export default function SubscriptionPage() {
         'Standard support',
         'No watermark',
       ],
-      priceId: { month: 'prod_Sv9zE3Lt3Dza4U', year: 'prod_Szk7iWgJ9yfxrq' }, // Stripe price IDs
+      priceId: { 
+        month: process.env.NEXT_PUBLIC_STRIPE_STARTER_MONTHLY_PRICE_ID,
+        year: process.env.NEXT_PUBLIC_STRIPE_STARTER_YEARLY_PRICE_ID
+      },
       popular: false,
     },
     {
       name: 'Creator',
-      price: { month: '$24.99', year: '$249' }, 
+      price: { month: '$24.99', year: '$249' },
       period: { month: '/month', year: '/year' },
       features: [
         'Export videos in Full HD 1080p',
@@ -95,12 +98,15 @@ export default function SubscriptionPage() {
         'Priority support',
         'Custom branding',
       ],
-      priceId: { month: 'prod_SzjVo4rdm3LBx0', year: 'prod_Szk5YrAfOq7C0l' }, // Stripe price IDs
+      priceId: { 
+        month: process.env.NEXT_PUBLIC_STRIPE_CREATOR_MONTHLY_PRICE_ID,
+        year: process.env.NEXT_PUBLIC_STRIPE_CREATOR_YEARLY_PRICE_ID
+      },
       popular: true,
     },
     {
       name: 'Producer',
-      price: { month: '$69.99', year: '$699' }, // 17% discount approx for yearly
+      price: { month: '$69.99', year: '$699' },
       period: { month: '/month', year: '/year' },
       features: [
         'Export videos in Full HD 1080p',
@@ -115,9 +121,12 @@ export default function SubscriptionPage() {
         'Analytics dashboard',
         'Team collaboration',
       ],
-      priceId: { month: 'prod_Szjf5hO6PQoUja', year: 'prod_Szk4OGazQoSRbi' }, // // Stripe price IDs
-      popular: true,
-    },
+      priceId: { 
+        month: process.env.NEXT_PUBLIC_STRIPE_PRODUCER_MONTHLY_PRICE_ID,
+        year: process.env.NEXT_PUBLIC_STRIPE_PRODUCER_YEARLY_PRICE_ID
+      },
+      popular: false
+    }
   ];
 
   return (

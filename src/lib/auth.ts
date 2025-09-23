@@ -20,9 +20,22 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 export const authOptions: NextAuthOptions = {
   debug: isDevelopment,
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma), // Type assertion removed as it should be properly typed
 
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          emailVerified: profile.email_verified
+        }
+      }
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -51,15 +64,6 @@ export const authOptions: NextAuthOptions = {
         };
       }
     }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          scope: "openid email profile"
-        }
-      }
-    }),
   ],
 
   session: {
@@ -76,6 +80,25 @@ export const authOptions: NextAuthOptions = {
           provider: account?.provider
         });
       }
+
+      // Create user in database if they don't exist (for Google auth)
+      if (account?.provider === 'google' && user.email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email }
+        });
+
+        if (!existingUser) {
+          await prisma.user.create({
+            data: {
+              email: user.email,
+              name: user.name || '',
+              image: user.image,
+              emailVerified: new Date(),
+            }
+          });
+        }
+      }
+
       return true;
     },
 
@@ -86,15 +109,20 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.sub = user.id;
+        token.provider = account?.provider;
       }
       return token;
     },
 
-    async redirect({ baseUrl }) {
-      return `${baseUrl}/dashboard`;
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl + "/dashboard"
     }
   },
 

@@ -8,21 +8,22 @@ datasource db {
 }
 
 model Account {
-  id                String  @id
+  id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
-  session_state     String?
-  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id_token         String? @db.Text
+  session_state    String?
+  user             User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model EmailLog {
@@ -38,7 +39,7 @@ model EmailLog {
   openedAt    DateTime?
   clickedAt   DateTime?
   metadata    Json?
-  User        User?     @relation(fields: [userId], references: [id])
+  user        User?     @relation(fields: [userId], references: [id])
 
   @@index([sentAt])
   @@index([status])
@@ -53,7 +54,7 @@ model EmailPreference {
   processingUpdates    Boolean @default(true)
   weeklyDigest         Boolean @default(true)
   featureAnnouncements Boolean @default(true)
-  User                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Session {
@@ -61,7 +62,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -76,11 +77,11 @@ model User {
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   password            String?
-  Account             Account[]
-  EmailLog            EmailLog[]
-  EmailPreference     EmailPreference?
-  Session             Session[]
-  Video               Video[]
+  accounts            Account[]
+  emailLogs           EmailLog[]
+  emailPreference     EmailPreference?
+  sessions            Session[]
+  videos              Video[]
 }
 
 model VerificationToken {
@@ -101,8 +102,10 @@ model Video {
   userId      String
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-  User        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  VideoClip   VideoClip[]
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoClips  VideoClip[]
+
+  @@index([userId])
 }
 
 model VideoClip {
@@ -113,9 +116,11 @@ model VideoClip {
   endTime     Int
   aspectRatio String
   videoUrl    String
-  captions    String?
+  captions    String?  @db.Text
   hashtags    String?
   videoId     String
   createdAt   DateTime @default(now())
-  Video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  video       Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
 }
