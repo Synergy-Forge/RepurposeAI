@@ -26,7 +26,7 @@ export const WelcomeEmail: React.FC<WelcomeEmailProps> = ({ data }) => {
 
       <Section style={content}>
         <Text style={text}>
-          We're excited to have you join our community of content creators.
+          We&apos;re excited to have you join our community of content creators.
           With Repurpose AI, you can transform your long-form videos into
           engaging short clips optimized for social media.
         </Text>
