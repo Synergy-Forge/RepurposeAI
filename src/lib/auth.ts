@@ -85,15 +85,31 @@ export const authOptions: NextAuthOptions = {
       // Create user in database if they don't exist (for Google auth)
       try {
         if (account?.provider === 'google' && user.email) {
-          console.log('[AUTH] Checking for existing user:', user.email);
+          console.log('[AUTH] Starting Google OAuth flow for:', user.email);
           
-          const existingUser = await prisma.user.findUnique({
+          // First, check if the Google account is already linked to any user
+          const existingAccount = await prisma.account.findUnique({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              }
+            }
+          });
+
+          if (existingAccount) {
+            console.log('[AUTH] Found existing account link for user:', existingAccount.userId);
+            return true;
+          }
+
+          // Find or create user
+          let targetUser = await prisma.user.findUnique({
             where: { email: user.email }
           });
 
-          if (!existingUser) {
+          if (!targetUser) {
             console.log('[AUTH] Creating new user:', user.email);
-            const newUser = await prisma.user.create({
+            targetUser = await prisma.user.create({
               data: {
                 email: user.email,
                 name: user.name || '',
@@ -101,68 +117,53 @@ export const authOptions: NextAuthOptions = {
                 emailVerified: new Date(),
               }
             });
-            console.log('[AUTH] User created successfully:', newUser.id);
-
-            // Check if account already exists
-            const existingAccount = await prisma.account.findFirst({
-              where: {
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-              }
-            });
-
-            if (!existingAccount) {
-              // Create the account link
-              await prisma.account.create({
-                data: {
-                  id: crypto.randomUUID(),
-                  userId: newUser.id,
-                  type: account.type,
-                  provider: account.provider,
-                  providerAccountId: account.providerAccountId,
-                  access_token: account.access_token ?? null,
-                  expires_at: account.expires_at ?? null,
-                  token_type: account.token_type ?? null,
-                  scope: account.scope ?? null,
-                  id_token: account.id_token ?? null,
-                }
-              });
-              console.log('[AUTH] Account linked successfully');
-            }
+            console.log('[AUTH] User created successfully:', targetUser.id);
           } else {
-            console.log('[AUTH] Existing user found:', existingUser.id);
-            
-            // Check if account already exists
-            const existingAccount = await prisma.account.findFirst({
-              where: {
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-              }
+            console.log('[AUTH] Using existing user:', targetUser.id);
+          }
+
+          // Create the account link
+          try {
+            const accountData = {
+              id: crypto.randomUUID(),
+              userId: targetUser.id,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              access_token: account.access_token ?? null,
+              expires_at: account.expires_at ?? null,
+              token_type: account.token_type ?? null,
+              scope: account.scope ?? null,
+              id_token: account.id_token ?? null,
+              refresh_token: account.refresh_token ?? null
+            };
+
+            console.log('[AUTH] Creating account link with data:', JSON.stringify(accountData, null, 2));
+
+            await prisma.account.create({
+              data: accountData
             });
 
-            if (!existingAccount) {
-              // Link the Google account
-              await prisma.account.create({
-                data: {
-                  id: crypto.randomUUID(),
-                  userId: existingUser.id,
-                  type: account.type,
-                  provider: account.provider,
-                  providerAccountId: account.providerAccountId,
-                  access_token: account.access_token ?? null,
-                  expires_at: account.expires_at ?? null,
-                  token_type: account.token_type ?? null,
-                  scope: account.scope ?? null,
-                  id_token: account.id_token ?? null,
-                }
-              });
-              console.log('[AUTH] Account linked to existing user');
+            console.log('[AUTH] Account linked successfully to user:', targetUser.id);
+            return true;
+          } catch (linkError) {
+            console.error('[AUTH] Error linking account:', linkError);
+            // Try to provide more specific error information
+            if (linkError instanceof Error) {
+              console.error('[AUTH] Error details:', linkError.message);
+              // Type guard for Prisma errors which have a code property
+              if (linkError && typeof linkError === 'object' && 'code' in linkError) {
+                const prismaError = linkError as { code: string };
+                console.error('[AUTH] Error code:', prismaError.code);
+              }
             }
+            throw linkError;
           }
         }
         return true;
       } catch (error) {
         console.error('[AUTH] Error in signIn callback:', error);
+        console.error('[AUTH] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
         return false;
       }
 
