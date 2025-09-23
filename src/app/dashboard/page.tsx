@@ -118,7 +118,10 @@ export default function HomePage() {
           <CardContent>
           <Button
                 className="w-full"
-                onClick={() => signIn("google", { callbackUrl: "/dashboard" })} >
+                onClick={() => signIn("google", { 
+                  callbackUrl: "/dashboard",
+                  redirect: true 
+                })} >
                 Sign in with Google
           </Button>
           </CardContent>

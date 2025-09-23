@@ -73,6 +73,10 @@ export const authOptions: NextAuthOptions = {
 
   secret: process.env.NEXTAUTH_SECRET,
 
+  pages: {
+    signIn: '/login',
+  },
+  
   callbacks: {
     async signIn({ user, account }) {
       if (isDevelopment) {
@@ -201,31 +205,25 @@ export const authOptions: NextAuthOptions = {
     async redirect({ url, baseUrl }) {
       console.log('[AUTH] Redirect triggered:', { url, baseUrl });
       
-      // After sign in, always redirect to dashboard
-      if (url.includes('/api/auth/callback')) {
+      // After sign in, always redirect to dashboard regardless of the callback URL
+      if (url.includes('/api/auth/callback') || url.includes('/login')) {
         console.log('[AUTH] Redirecting to dashboard after sign in');
         return `${baseUrl}/dashboard`;
       }
 
-      // Default NextAuth.js redirect behavior for other cases
+      // If URL is relative, make it absolute
       if (url.startsWith("/")) {
-        console.log('[AUTH] Redirecting to relative URL:', url);
         return `${baseUrl}${url}`;
       }
       
-      if (new URL(url).origin === baseUrl) {
-        console.log('[AUTH] Redirecting to same-origin URL:', url);
+      // Keep same origin URLs as is
+      if (url.startsWith(baseUrl)) {
         return url;
       }
 
-      console.log('[AUTH] Fallback redirect to dashboard');
+      // Default to dashboard
       return `${baseUrl}/dashboard`;
     }
-  },
-
-  pages: {
-    signIn: '/login',
-    error: '/login'
   },
 
   events: {
