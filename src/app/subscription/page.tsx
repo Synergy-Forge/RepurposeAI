@@ -136,7 +136,7 @@ export default function SubscriptionPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button variant="ghost" asChild>
-              <Link href="/">← Back to Dashboard</Link>
+              <Link href="/dashboard">← Back to Dashboard</Link>
             </Button>
             <h1 className="text-2xl font-bold">Subscription Plans</h1>
           </div>
