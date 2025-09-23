@@ -82,21 +82,33 @@ export const authOptions: NextAuthOptions = {
       }
 
       // Create user in database if they don't exist (for Google auth)
-      if (account?.provider === 'google' && user.email) {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email }
-        });
-
-        if (!existingUser) {
-          await prisma.user.create({
-            data: {
-              email: user.email,
-              name: user.name || '',
-              image: user.image,
-              emailVerified: new Date(),
-            }
+      try {
+        if (account?.provider === 'google' && user.email) {
+          console.log('[AUTH] Checking for existing user:', user.email);
+          
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email }
           });
+
+          if (!existingUser) {
+            console.log('[AUTH] Creating new user:', user.email);
+            await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name || '',
+                image: user.image,
+                emailVerified: new Date(),
+              }
+            });
+            console.log('[AUTH] User created successfully');
+          } else {
+            console.log('[AUTH] Existing user found:', existingUser.id);
+          }
         }
+        return true;
+      } catch (error) {
+        console.error('[AUTH] Error in signIn callback:', error);
+        return false;
       }
 
       return true;
