@@ -1,0 +1,51 @@
+@keyframes firePulse {
+  0% {
+    text-shadow: 
+      0 0 4px rgba(255, 200, 0, 0.5),
+      0 0 11px rgba(255, 200, 0, 0.5),
+      0 0 19px rgba(255, 200, 0, 0.5),
+      0 0 40px rgba(255, 140, 0, 0.5),
+      0 0 80px rgba(255, 140, 0, 0.3),
+      0 0 90px rgba(255, 140, 0, 0.2),
+      0 0 100px rgba(255, 140, 0, 0.1),
+      0 0 150px rgba(255, 140, 0, 0.1);
+  }
+  50% {
+    text-shadow: 
+      0 0 4px rgba(255, 200, 0, 0.6),
+      0 0 11px rgba(255, 200, 0, 0.6),
+      0 0 19px rgba(255, 200, 0, 0.6),
+      0 0 40px rgba(255, 140, 0, 0.6),
+      0 0 80px rgba(255, 140, 0, 0.4),
+      0 0 90px rgba(255, 140, 0, 0.3),
+      0 0 100px rgba(255, 140, 0, 0.2),
+      0 0 150px rgba(255, 140, 0, 0.1);
+  }
+  100% {
+    text-shadow: 
+      0 0 4px rgba(255, 200, 0, 0.7),
+      0 0 11px rgba(255, 200, 0, 0.7),
+      0 0 19px rgba(255, 200, 0, 0.7),
+      0 0 40px rgba(255, 140, 0, 0.7),
+      0 0 80px rgba(255, 140, 0, 0.5),
+      0 0 90px rgba(255, 140, 0, 0.4),
+      0 0 100px rgba(255, 140, 0, 0.3),
+      0 0 150px rgba(255, 140, 0, 0.2);
+  }
+}
+
+.animate-fire {
+  animation: firePulse 0.8s infinite alternate;
+}
+
+/* Global gradient background */
+.bg-gradient-global {
+  background: linear-gradient(to right, 
+    rgba(245, 186, 7, 1.0),
+    rgba(106, 26, 107, 0.8),
+    rgba(176, 48, 94, 1.0),
+    rgba(26, 61, 255, 0.6),
+    rgba(255, 255, 255, 0.5)
+  );
+  background-attachment: fixed;
+}
