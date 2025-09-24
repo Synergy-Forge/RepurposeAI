@@ -467,3 +467,13 @@ This setup significantly improves our development process by:
 - **Implemented a 'secure-by-default' middleware strategy (middleware.ts). Moved from a fragile route-by-route protection model to a robust pattern that automatically protects all future pages and routes, explicitly excluding only public assets and authentication endpoints. This enhances the application's security posture and scalability, eliminating the risk of accidentally exposing new sensitive pages.**
 
 - **Created proper TypeScript declarations for NextAuth by extending session and user interfaces, ensuring type safety throughout the authentication flow.**
+
+# Larissa Melo - (24/09/2025)
+
+### Enhanced user security and improved navigation layout for better user experience.
+
+- **Implemented strong password validation on the registration page.**  
+  Added a client-side password validator enforcing minimum length, uppercase, lowercase, number, and special character requirements. This prevents users from creating weak accounts and significantly improves overall security.
+
+- **Refactored navigation component for proper spacing and accessibility.**  
+  Introduced responsive `gap` utilities (`gap-4` on mobile, `md:gap-8` on desktop) to ensure menu items are evenly spaced and visually consistent across breakpoints. Also normalized the `href` for "How It Works" to avoid issues with spaces in fragment identifiers.

@@ -17,22 +17,77 @@ export default function RegisterPage() {
     password: ''
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<string | null>(null);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+
+    if (name === "password") {
+      setPasswordStrength(checkPasswordStrength(value));
+    }
   };
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  // Password validator
+  const validatePassword = (password: string) => {
+    const minLength = 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (password.length < minLength) {
+      return "Password must be at least 8 characters long.";
+    }
+    if (!hasUpper) {
+      return "Password must contain at least one uppercase letter.";
+    }
+    if (!hasLower) {
+      return "Password must contain at least one lowercase letter.";
+    }
+    if (!hasNumber) {
+      return "Password must contain at least one number.";
+    }
+    if (!hasSpecial) {
+      return "Password must contain at least one special character.";
+    }
+
+    return null; // valid
+  };
+
+  // Strength meter (Weak, Medium, Strong)
+  const checkPasswordStrength = (password: string): string => {
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[a-z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
+
+    if (score <= 2) return "Weak";
+    if (score === 3 || score === 4) return "Medium";
+    if (score === 5) return "Strong";
+    return "Weak";
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Check before sending
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) {
+      setError(passwordError);
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/auth/register', {
@@ -48,6 +103,7 @@ export default function RegisterPage() {
       if (response.ok) {
         setSuccess(true);
         setFormData({ name: '', email: '', password: '' });
+        setPasswordStrength(null);
       } else {
         setError(data.error || 'Registration failed');
       }
@@ -77,14 +133,10 @@ export default function RegisterPage() {
       {/* Main Content */}
       <div className="flex justify-center items-center min-h-screen py-10 px-5">
         <div className="bg-gray-900/85 backdrop-blur-md border border-white/10 rounded-2xl p-10 w-full max-w-md text-center shadow-2xl">
-          <h1 className="text-3xl lg:text-4xl font-bold mb-3">
-            Register
-          </h1>
-          <p className="text-gray-400 mb-8">
-            It is quick and easy.
-          </p>
+          <h1 className="text-3xl lg:text-4xl font-bold mb-3">Register</h1>
+          <p className="text-gray-400 mb-8">It is quick and easy.</p>
 
-          {/* Success Message */}
+          {/* Success */}
           {success && (
             <div className="mb-6 p-4 bg-green-900/50 border border-green-500/50 rounded-lg text-left">
               <p className="text-green-200 text-sm font-medium">
@@ -93,7 +145,7 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Error Message */}
+          {/* Error */}
           {error && (
             <div className="mb-6 p-4 bg-red-900/50 border border-red-500/50 rounded-lg text-left">
               <p className="text-red-200 text-sm font-medium">{error}</p>
@@ -112,7 +164,7 @@ export default function RegisterPage() {
                 value={formData.name}
                 onChange={handleInputChange}
                 required
-                className="w-full py-3 px-4 bg-gray-800 border border-gray-600 rounded-lg text-white font-['Space_Grotesk'] text-base transition-all duration-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                className="w-full py-3 px-4 bg-gray-800 border border-gray-600 rounded-lg text-white text-base transition-all focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
               />
             </div>
 
@@ -127,10 +179,10 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className="w-full py-3 px-4 bg-gray-800 border border-gray-600 rounded-lg text-white font-['Space_Grotesk'] text-base transition-all duration-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                className="w-full py-3 px-4 bg-gray-800 border border-gray-600 rounded-lg text-white text-base transition-all focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
               />
             </div>
-            
+
             <div className="mb-6 text-left">
               <label htmlFor="password" className="block mb-2 text-gray-300 font-medium">
                 Create a Password
@@ -142,14 +194,24 @@ export default function RegisterPage() {
                 value={formData.password}
                 onChange={handleInputChange}
                 required
-                className="w-full py-3 px-4 bg-gray-800 border border-gray-600 rounded-lg text-white font-['Space_Grotesk'] text-base transition-all duration-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                className="w-full py-3 px-4 bg-gray-800 border border-gray-600 rounded-lg text-white text-base transition-all focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
               />
+              {/* Password Strength */}
+              {passwordStrength && (
+                <p className={`mt-2 text-sm font-medium
+                  ${passwordStrength === "Weak" ? "text-red-400" : ""}
+                  ${passwordStrength === "Medium" ? "text-yellow-400" : ""}
+                  ${passwordStrength === "Strong" ? "text-green-400" : ""}
+                `}>
+                  Password strength: {passwordStrength}
+                </p>
+              )}
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 border-none rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white mb-5 hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 rounded-lg text-base font-bold flex justify-center items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white mb-5 hover:opacity-90 hover:shadow-lg hover:shadow-purple-500/50 disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -163,7 +225,7 @@ export default function RegisterPage() {
           </form>
 
           {/* Divider */}
-          <div className="flex items-center text-center text-gray-500 my-6">
+          <div className="flex items-center text-gray-500 my-6">
             <div className="flex-1 border-b border-gray-600"></div>
             <span className="px-2">or</span>
             <div className="flex-1 border-b border-gray-600"></div>
@@ -171,7 +233,7 @@ export default function RegisterPage() {
 
           <button
             onClick={handleGoogleRegister}
-            className="w-full py-4 border border-gray-600 rounded-lg text-base font-bold cursor-pointer transition-all duration-300 text-center flex justify-center items-center gap-3 bg-gray-800 text-white hover:bg-gray-700"
+            className="w-full py-4 border border-gray-600 rounded-lg text-base font-bold flex justify-center items-center gap-3 bg-gray-800 text-white hover:bg-gray-700"
           >
             <svg className="w-5 h-5" viewBox="0 0 48 48">
               <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
@@ -184,7 +246,7 @@ export default function RegisterPage() {
 
           <div className="mt-5 text-sm">
             <span className="text-gray-400">Already have an account? </span>
-            <Link href="/login" className="text-purple-500 no-underline transition-colors duration-300 hover:text-pink-500 hover:underline">
+            <Link href="/login" className="text-purple-500 hover:text-pink-500 hover:underline">
               Login
             </Link>
           </div>

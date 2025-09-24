@@ -18,18 +18,29 @@ export function Navigation() {
         Repurpose
       </Link>
 
-      <nav className={`transition-all duration-300 ${
-        isMenuOpen
-          ? "flex flex-col absolute top-full left-0 w-full bg-black/95 p-5 gap-4 md:relative md:flex-row md:bg-transparent md:p-0"
-          : "hidden md:flex md:items-center"
-      }`}>
-        <Link href="#features" className="ml-0 md:ml-8 text-gray-300 hover:text-white transition-colors">
+      <nav
+        className={`transition-all duration-300 ${
+          isMenuOpen
+            ? "flex flex-col absolute top-full left-0 w-full bg-black/95 p-5 gap-4 md:relative md:flex-row md:bg-transparent md:p-0 md:gap-8"
+            : "hidden md:flex md:items-center md:gap-8"
+        }`}
+      >
+        <Link
+          href="#features"
+          className="text-gray-300 hover:text-white transition-colors"
+        >
           Features
         </Link>
-        <Link href="#how it works" className="text-gray-300 hover:text-white transition-colors">
+        <Link
+          href="#how-it-works"
+          className="text-gray-300 hover:text-white transition-colors"
+        >
           How It Works
         </Link>
-        <Link href="#pricing" className="text-gray-300 hover:text-white transition-colors">
+        <Link
+          href="#pricing"
+          className="text-gray-300 hover:text-white transition-colors"
+        >
           Pricing
         </Link>
       </nav>
