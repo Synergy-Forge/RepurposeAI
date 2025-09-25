@@ -1,0 +1,370 @@
+/* Dashboard CSS Variables and Custom Styles */
+
+/* Color Palette & Theming */
+:root,
+html[data-theme="light"] {
+  --bg-body: #f9fafb;
+  --bg-main: #f9fafb;
+  --card-bg: #ffffff;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --title-color: #e53e3e;
+  --success-color: #22c55e;
+  --chart-grid-color: rgba(0, 0, 0, 0.05);
+  --chart-tick-color: #4b5563;
+  --sidebar-gradient: linear-gradient(to bottom, #d81414, #cc8d1c, #343633);
+  --glass-bg: rgba(255, 255, 255, 0.2);
+}
+
+html[data-theme="dark"] {
+  --bg-body: #121212;
+  --bg-main: #121212;
+  --card-bg: #211c22;
+  --text-primary: #f7fafc;
+  --text-secondary: #a0aec0;
+  --border-color: #352f37;
+  --title-color: #818cf8;
+  --success-color: #4ade80;
+  --chart-grid-color: rgba(255, 255, 255, 0.1);
+  --chart-tick-color: #a0aec0;
+  --sidebar-gradient: linear-gradient(to bottom, #4f46e5, #a78bfa);
+  --glass-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* Dashboard Body Styles */
+.dashboard-body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Component Styles */
+.title-gradient {
+  color: var(--title-color);
+  transition: color 0.3s ease;
+}
+
+/* Sidebar Styles */
+.dashboard-sidebar {
+  background: var(--sidebar-gradient);
+  transition: background 0.3s ease-in-out;
+}
+
+.sidebar-item {
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.sidebar-item:hover,
+.sidebar-item.active {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(10px);
+}
+
+.sidebar-item span,
+.sidebar-item svg {
+  color: #f3f4f6;
+  transition: color 0.2s ease;
+}
+
+.sidebar-item.active span,
+.sidebar-item.active svg,
+.sidebar-item:hover span,
+.sidebar-item:hover svg {
+  color: #ffffff;
+}
+
+/* Cards & Containers */
+.dashboard-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Header Styles */
+.dashboard-header {
+  background-color: var(--bg-main);
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Button Styles */
+.dashboard-btn {
+  color: white;
+  transition: all 0.15s ease-in-out;
+}
+
+.dashboard-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background-color: var(--title-color);
+}
+
+.btn-success {
+  background-color: var(--success-color);
+}
+
+/* Glass Morphism Effects */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* User Menu Dropdown */
+.user-menu {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(16px);
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+}
+
+.user-menu.hidden {
+  transform: scale(0.95);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.user-menu-item {
+  display: block;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  transition: colors 0.2s;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.user-menu-item:hover {
+  background-color: var(--bg-body);
+}
+
+/* Settings Navigation */
+.settings-nav-item {
+  display: block;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-primary);
+}
+
+.settings-nav-item:hover {
+  background-color: var(--border-color);
+}
+
+.settings-nav-item.active {
+  background: var(--title-color);
+  color: white !important;
+}
+
+/* Input Styles */
+.dashboard-input {
+  background-color: var(--bg-body);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 0.5rem;
+  padding: 0.625rem 1rem;
+  width: 100%;
+  transition: all 0.2s;
+}
+
+.dashboard-input:focus {
+  outline: none;
+  border-color: var(--title-color);
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1);
+}
+
+/* Editor Tool Styles */
+.editor-tool {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  color: var(--text-primary);
+}
+
+.editor-tool:hover {
+  background-color: var(--border-color);
+}
+
+.editor-tool.active {
+  background-color: var(--title-color);
+  color: white;
+}
+
+.editor-tool svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-right: 0.75rem;
+}
+
+/* AI Clips Gradient Text */
+.gradient-text {
+  background: linear-gradient(90deg, #4f46e5, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Upload Section Styles */
+.upload-dropzone {
+  border: 2px dashed;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.2s;
+  border-color: var(--border-color);
+  background-color: var(--bg-body);
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+  border-color: var(--title-color);
+  background-color: var(--glass-bg);
+}
+
+/* Progress Bar Styles */
+.dashboard-progress {
+  background-color: var(--border-color);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.dashboard-progress-fill {
+  background-color: var(--title-color);
+  height: 100%;
+  transition: all 0.3s ease-out;
+}
+
+/* Template Card Styles */
+.template-card {
+  transition: all 0.3s ease-out;
+}
+
+.template-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
+}
+
+/* Chart Container */
+.chart-container {
+  position: relative;
+  min-height: 300px;
+}
+
+/* Responsive Sidebar */
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .dashboard-sidebar.open {
+    transform: translateX(0);
+  }
+}
+
+/* Scrollbar Styles */
+.dashboard-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.dashboard-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Animation Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s infinite;
+}
+
+/* Loading States */
+.skeleton {
+  animation: pulse 2s infinite;
+  background: linear-gradient(90deg, var(--border-color) 25%, transparent 37%, var(--border-color) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Focus Visible Styles */
+.focus-visible:focus-visible {
+  outline: 2px solid var(--title-color);
+  outline-offset: 2px;
+}
