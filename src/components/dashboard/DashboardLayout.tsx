@@ -71,3 +71,4 @@ export function DashboardLayout({ children, subscription }: DashboardLayoutProps
     </div>
   );
 }
+ 
