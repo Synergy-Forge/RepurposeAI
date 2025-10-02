@@ -856,3 +856,13 @@ This setup significantly improves our development process by:
 
 - **Refactored navigation component for proper spacing and accessibility.**  
   Introduced responsive `gap` utilities (`gap-4` on mobile, `md:gap-8` on desktop) to ensure menu items are evenly spaced and visually consistent across breakpoints. Also normalized the `href` for "How It Works" to avoid issues with spaces in fragment identifiers.
+
+# Felipe Abe- (02/10/2025)
+
+### Implementation of Redis queue infrastructure with end-to-end testing and security hardening for scalable asynchronous processing.
+
+- **Set up BullMQ-based job queue using Redis Streams, configured for at-least-once semantics with exponential backoff retries (3 attempts, 5s initial delay) and no DLQ, ensuring reliable email processing and future scalability.**
+
+- **Developed isolated end-to-end test harness in [`e2e-bullmq`](e2e-bullmq ) folder, simulating normal job processing, controlled failures, connection faults, and metrics collection, all running deterministically against Azure Redis with TLS and AUTH.**
+
+- **Applied security best practices including credential sanitization in logs, mandatory TLS enforcement in production, PII-free payload summaries, and centralized connection management to prevent exposure and ensure idempotent, Windows-friendly operations.**

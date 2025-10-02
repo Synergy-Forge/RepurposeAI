@@ -1,16 +1,16 @@
-import { headers } from 'next/headers';
-import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { prisma } from '@/lib/prisma';
+import { headers } from "next/headers";
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+import { prisma } from "@/lib/prisma";
 
-// Função para inicializar o Stripe apenas quando necessário
+// Function to initialize Stripe only when needed
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY is not configured');
+    throw new Error("STRIPE_SECRET_KEY is not configured");
   }
-  
+
   return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-08-27.basil',
+    apiVersion: "2025-08-27.basil",
   });
 }
 
@@ -27,27 +27,27 @@ async function upsertSubscription(subscription: Stripe.Subscription) {
   if (!user) return;
 
   // Determine subscription plan based on price/product
-  let status: 'free' | 'starter' | 'creator' | 'producer' = 'free';
+  let status: "free" | "starter" | "creator" | "producer" = "free";
 
-  if (subscription.status === 'active' && subscription.items.data.length > 0) {
+  if (subscription.status === "active" && subscription.items.data.length > 0) {
     const priceId = subscription.items.data[0].price.id;
 
     // Map Stripe price IDs to subscription plans
     switch (priceId) {
-      case 'prod_Sv9zE3Lt3Dza4U': // Starter monthly
-      case 'prod_Szk7iWgJ9yfxrq': // Starter yearly
-        status = 'starter';
+      case "prod_Sv9zE3Lt3Dza4U": // Starter monthly
+      case "prod_Szk7iWgJ9yfxrq": // Starter yearly
+        status = "starter";
         break;
-      case 'prod_SzjVo4rdm3LBx0': // Creator monthly
-      case 'prod_Szk5YrAfOq7C0l': // Creator yearly
-        status = 'creator';
+      case "prod_SzjVo4rdm3LBx0": // Creator monthly
+      case "prod_Szk5YrAfOq7C0l": // Creator yearly
+        status = "creator";
         break;
-      case 'prod_Szjf5hO6PQoUja': // Producer monthly
-      case 'prod_Szk4OGazQoSRbi': // Producer yearly
-        status = 'producer';
+      case "prod_Szjf5hO6PQoUja": // Producer monthly
+      case "prod_Szk4OGazQoSRbi": // Producer yearly
+        status = "producer";
         break;
       default:
-        status = 'free';
+        status = "free";
     }
   }
 
@@ -79,7 +79,7 @@ async function removeSubscription(subscription: Stripe.Subscription) {
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      subscriptionStatus: 'free',
+      subscriptionStatus: "free",
       subscriptionEndDate: null,
     },
   });
@@ -89,17 +89,17 @@ async function handleCustomerEvent(event: Stripe.Event) {
   const customer = event.data.object as Stripe.Customer;
 
   switch (event.type) {
-    case 'customer.created':
+    case "customer.created":
       console.log(`Customer created: ${customer.id}`);
       // Handle customer creation if needed
       break;
 
-    case 'customer.updated':
+    case "customer.updated":
       console.log(`Customer updated: ${customer.id}`);
       // Handle customer updates if needed
       break;
 
-    case 'customer.deleted':
+    case "customer.deleted":
       console.log(`Customer deleted: ${customer.id}`);
       // Handle customer deletion - might need to clean up user data
       break;
@@ -110,21 +110,21 @@ async function handleSubscriptionEvent(event: Stripe.Event) {
   const subscription = event.data.object as Stripe.Subscription;
 
   switch (event.type) {
-    case 'customer.subscription.created':
-    case 'customer.subscription.updated':
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
       await upsertSubscription(subscription);
       break;
 
-    case 'customer.subscription.deleted':
+    case "customer.subscription.deleted":
       await removeSubscription(subscription);
       break;
 
-    case 'customer.subscription.paused':
+    case "customer.subscription.paused":
       console.log(`Subscription paused: ${subscription.id}`);
       // Handle subscription pause
       break;
 
-    case 'customer.subscription.resumed':
+    case "customer.subscription.resumed":
       console.log(`Subscription resumed: ${subscription.id}`);
       // Handle subscription resume
       break;
@@ -135,22 +135,22 @@ async function handleInvoiceEvent(event: Stripe.Event) {
   const invoice = event.data.object as Stripe.Invoice;
 
   switch (event.type) {
-    case 'invoice.payment_succeeded':
+    case "invoice.payment_succeeded":
       console.log(`Invoice payment succeeded: ${invoice.id}`);
       // Handle successful payment
       break;
 
-    case 'invoice.payment_failed':
+    case "invoice.payment_failed":
       console.log(`Invoice payment failed: ${invoice.id}`);
       // Handle failed payment - might need to notify user
       break;
 
-    case 'invoice.finalized':
+    case "invoice.finalized":
       console.log(`Invoice finalized: ${invoice.id}`);
       // Handle invoice finalization
       break;
 
-    case 'invoice.upcoming':
+    case "invoice.upcoming":
       console.log(`Upcoming invoice: ${invoice.id}`);
       // Handle upcoming invoice notification
       break;
@@ -161,17 +161,17 @@ async function handlePaymentEvent(event: Stripe.Event) {
   const paymentIntent = event.data.object as Stripe.PaymentIntent;
 
   switch (event.type) {
-    case 'payment_intent.succeeded':
+    case "payment_intent.succeeded":
       console.log(`Payment succeeded: ${paymentIntent.id}`);
       // Handle successful payment
       break;
 
-    case 'payment_intent.payment_failed':
+    case "payment_intent.payment_failed":
       console.log(`Payment failed: ${paymentIntent.id}`);
       // Handle failed payment
       break;
 
-    case 'payment_intent.canceled':
+    case "payment_intent.canceled":
       console.log(`Payment canceled: ${paymentIntent.id}`);
       // Handle canceled payment
       break;
@@ -182,12 +182,12 @@ async function handleCheckoutEvent(event: Stripe.Event) {
   const session = event.data.object as Stripe.Checkout.Session;
 
   switch (event.type) {
-    case 'checkout.session.completed':
+    case "checkout.session.completed":
       console.log(`Checkout session completed: ${session.id}`);
       // Handle successful checkout completion
       break;
 
-    case 'checkout.session.expired':
+    case "checkout.session.expired":
       console.log(`Checkout session expired: ${session.id}`);
       // Handle expired checkout session
       break;
@@ -198,29 +198,30 @@ async function handlePriceEvent(event: Stripe.Event) {
   const price = event.data.object as Stripe.Price;
 
   switch (event.type) {
-    case 'price.created':
+    case "price.created":
       console.log(`Price created: ${price.id}`);
       // Handle new price creation
       break;
 
-    case 'price.updated':
+    case "price.updated":
       console.log(`Price updated: ${price.id}`);
       // Handle price updates
       break;
 
-    case 'price.deleted':
+    case "price.deleted":
       console.log(`Price deleted: ${price.id}`);
       // Handle price deletion
       break;
   }
 }
 
-
-
 export async function POST(req: Request) {
   if (!webhookSecret) {
-    console.error('STRIPE_WEBHOOK_SECRET is not configured');
-    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+    console.error("STRIPE_WEBHOOK_SECRET is not configured");
+    return NextResponse.json(
+      { error: "Webhook secret not configured" },
+      { status: 500 }
+    );
   }
 
   const body = await req.text();
@@ -229,32 +230,35 @@ export async function POST(req: Request) {
   try {
     // Inicializa o Stripe apenas quando a rota é chamada
     const stripe = getStripe();
-    
-    const signature = (await headers()).get('stripe-signature');
+
+    const signature = (await headers()).get("stripe-signature");
     if (!signature) {
-      return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing stripe-signature header" },
+        { status: 400 }
+      );
     }
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
-    console.error('Webhook signature verification failed:', err);
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    console.error("Webhook signature verification failed:", err);
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   try {
     // Route events to appropriate handlers
-    if (event.type.startsWith('customer.')) {
-      if (event.type.startsWith('customer.subscription.')) {
+    if (event.type.startsWith("customer.")) {
+      if (event.type.startsWith("customer.subscription.")) {
         await handleSubscriptionEvent(event);
       } else {
         await handleCustomerEvent(event);
       }
-    } else if (event.type.startsWith('invoice.')) {
+    } else if (event.type.startsWith("invoice.")) {
       await handleInvoiceEvent(event);
-    } else if (event.type.startsWith('payment_intent.')) {
+    } else if (event.type.startsWith("payment_intent.")) {
       await handlePaymentEvent(event);
-    } else if (event.type.startsWith('checkout.session.')) {
+    } else if (event.type.startsWith("checkout.session.")) {
       await handleCheckoutEvent(event);
-    } else if (event.type.startsWith('price.')) {
+    } else if (event.type.startsWith("price.")) {
       await handlePriceEvent(event);
     } else {
       console.log(`Unhandled event type: ${event.type}`);
@@ -262,9 +266,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('Webhook handler failed:', error);
+    console.error("Webhook handler failed:", error);
     return NextResponse.json(
-      { error: 'Webhook handler failed' },
+      { error: "Webhook handler failed" },
       { status: 500 }
     );
   }
