@@ -1,7 +1,12 @@
-import { z } from 'zod';
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '@/lib/trpc';
-import { EmailService } from '@/lib/email';
-import { EmailType } from '@/lib/email/types';
+import { z } from "zod";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "@/lib/trpc";
+import { emailQueue } from "@/lib/queues/emailQueue";
+import { EmailService } from "@/lib/email";
+import { EmailType } from "@/lib/email/types";
 
 const emailPreferencesSchema = z.object({
   marketingEmails: z.boolean(),
@@ -29,9 +34,8 @@ export const emailRouter = createTRPCRouter({
 
   updatePreferences: protectedProcedure
     .input(emailPreferencesSchema)
-    .mutation(async ({ ctx: _ctx, input }) => {
+    .mutation(async ({ ctx: _ctx, input: _input }) => {
       // This would update the database
-      console.log('Updating email preferences:', input);
       return { success: true };
     }),
 
@@ -42,17 +46,15 @@ export const emailRouter = createTRPCRouter({
 
   resendEmail: protectedProcedure
     .input(z.object({ emailLogId: z.string() }))
-    .mutation(async ({ ctx: _ctx, input }) => {
+    .mutation(async ({ ctx: _ctx, input: _input }) => {
       // This would resend an email from the log
-      console.log('Resending email:', input.emailLogId);
       return { success: true };
     }),
 
   unsubscribe: publicProcedure
     .input(z.object({ token: z.string() }))
-    .mutation(async ({ ctx: _ctx, input }) => {
+    .mutation(async ({ ctx: _ctx, input: _input }) => {
       // This would handle unsubscribe requests
-      console.log('Unsubscribe request:', input.token);
       return { success: true };
     }),
 
@@ -63,15 +65,18 @@ export const emailRouter = createTRPCRouter({
       const emailService = new EmailService();
       const data = {
         user: {
-          name: 'Preview User',
-          email: 'preview@example.com',
-          plan: 'Free' as const,
+          name: "Preview User",
+          email: "preview@example.com",
+          plan: "Free" as const,
         },
-        unsubscribeUrl: 'https://re-purpose.studio/unsubscribe',
-        supportUrl: 'mailto:support@re-purpose.studio',
+        unsubscribeUrl: "https://re-purpose.studio/unsubscribe",
+        supportUrl: "mailto:support@re-purpose.studio",
       };
 
-      const content = await emailService['generateEmailContent'](input.type, data);
+      const content = await emailService["generateEmailContent"](
+        input.type,
+        data
+      );
       return content;
     }),
 
@@ -81,15 +86,36 @@ export const emailRouter = createTRPCRouter({
       const emailService = new EmailService();
       const data = {
         user: {
-          name: 'Test User',
+          name: "Test User",
           email: input.email,
-          plan: 'Free' as const,
+          plan: "Free" as const,
         },
-        unsubscribeUrl: 'https://re-purpose.studio/unsubscribe',
-        supportUrl: 'mailto:support@re-purpose.studio',
+        unsubscribeUrl: "https://re-purpose.studio/unsubscribe",
+        supportUrl: "mailto:support@re-purpose.studio",
       };
 
-      const success = await emailService.sendEmail(EmailType.WELCOME, ctx.session.user.id, data);
+      const success = await emailService.sendEmail(
+        EmailType.WELCOME,
+        ctx.session.user.id,
+        data
+      );
       return { success };
+    }),
+
+  enqueueEmail: protectedProcedure
+    .input(
+      z.object({
+        to: z.string().email(),
+        subject: z.string().min(1),
+        template: z.string().optional(),
+        data: z.record(z.unknown()).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const job = await emailQueue.add("send", input, {
+        attempts: 3,
+      });
+
+      return { jobId: job.id };
     }),
 });

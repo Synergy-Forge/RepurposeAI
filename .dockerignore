@@ -1,0 +1,45 @@
+# Build outputs
+.next
+dist
+*.log
+*.tsbuildinfo
+
+# Dependencies
+node_modules
+
+# Version control
+.git
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Documentation and configs
+README.md
+CHANGELOG.md
+*.md
+!package.json
+!package-lock.json
+
+# Test files
+coverage
+*.test.ts
+*.spec.ts
+e2e-bullmq
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore

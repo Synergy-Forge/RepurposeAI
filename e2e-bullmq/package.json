@@ -1,0 +1,23 @@
+{
+  "name": "repurposeai-bullmq-e2e",
+  "version": "1.0.0",
+  "description": "Isolated BullMQ end-to-end test harness for RepurposeAI",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.17.0"
+  },
+  "scripts": {
+    "run": "tsx src/run.ts",
+    "fault": "tsx src/simulate_connection_fault.ts"
+  },
+  "dependencies": {
+    "bullmq": "^5.58.9",
+    "ioredis": "^5.8.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+
+FROM node:20.18.1-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+ARG HUSKY=0
+ENV HUSKY=${HUSKY}
+RUN npm ci --omit=dev
+
+FROM node:20.18.1-alpine AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY tsconfig*.json ./
+COPY src ./src
+RUN npx tsc -p tsconfig.worker.json
+
+FROM node:20.18.1-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Security: Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
+
+USER nodejs
+
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=nodejs:nodejs /app/dist ./dist
+
+CMD ["node", "dist/lib/workers/emailWorker.js"]
