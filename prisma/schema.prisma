@@ -74,6 +74,8 @@ model User {
   stripeCustomerId    String?          @unique
   subscriptionStatus  String           @default("free")
   subscriptionEndDate DateTime?
+  videosProcessed     Int              @default(0)
+  videoQuotaLimit     Int              @default(5)
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
   password            String?

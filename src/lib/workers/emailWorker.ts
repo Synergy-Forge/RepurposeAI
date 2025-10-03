@@ -52,6 +52,7 @@ export const startEmailWorker = () => {
     },
     {
       connection,
+      concurrency: 5, // Limit to 5 concurrent jobs to prevent resource exhaustion
     }
   );
 

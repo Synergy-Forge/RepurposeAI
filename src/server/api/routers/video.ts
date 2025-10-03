@@ -25,6 +25,15 @@ export const videoRouter = createTRPCRouter({
 
       // Decode base64 video data
       const videoBuffer = Buffer.from(videoData, 'base64');
+      
+      // Validate video size (max 500MB)
+      const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB in bytes
+      if (videoBuffer.length > MAX_VIDEO_SIZE) {
+        throw new Error(
+          `Video size (${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB) exceeds maximum allowed size of 500MB`
+        );
+      }
+      
       const videoFileName = `${randomUUID()}.mp4`;
       const videoPath = join(tmpdir(), videoFileName);
 
@@ -61,6 +70,27 @@ export const videoRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { videoId } = input;
       const userId = ctx.session.user.id;
+
+      // Check user's video quota before processing
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          videosProcessed: true,
+          videoQuotaLimit: true,
+          subscriptionStatus: true,
+        },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Enforce quota limit
+      if (user.videosProcessed >= user.videoQuotaLimit) {
+        throw new Error(
+          `Video processing quota exceeded. You have processed ${user.videosProcessed}/${user.videoQuotaLimit} videos. Please upgrade your plan to process more videos.`
+        );
+      }
 
       // Get video from database
       const video = await ctx.prisma.video.findFirst({
@@ -109,6 +139,16 @@ export const videoRouter = createTRPCRouter({
         await ctx.prisma.video.update({
           where: { id: videoId },
           data: { status: 'completed' },
+        });
+
+        // Increment user's processed videos counter
+        await ctx.prisma.user.update({
+          where: { id: userId },
+          data: {
+            videosProcessed: {
+              increment: 1,
+            },
+          },
         });
 
         return {
