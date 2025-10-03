@@ -91,7 +91,9 @@ export const startEmailWorker = () => {
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {
-    console.log(`[email-worker] ${signal} received, shutting down gracefully...`);
+    console.log(
+      `[email-worker] ${signal} received, shutting down gracefully...`
+    );
     try {
       await worker.close();
       await queueEvents.close();
