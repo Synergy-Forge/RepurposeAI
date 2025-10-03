@@ -89,7 +89,25 @@ export const startEmailWorker = () => {
     console.error("[email-worker] Queue events error", error);
   });
 
-  return worker;
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    console.log(`[email-worker] ${signal} received, shutting down gracefully...`);
+    try {
+      await worker.close();
+      await queueEvents.close();
+      await redisClient.quit();
+      console.log("[email-worker] Shutdown complete");
+      process.exit(0);
+    } catch (error) {
+      console.error("[email-worker] Error during shutdown:", error);
+      process.exit(1);
+    }
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+
+  return { worker, queueEvents, redisClient };
 };
 
 if (typeof require !== "undefined" && require.main === module) {

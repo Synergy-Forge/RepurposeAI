@@ -21,7 +21,13 @@ export const getEmailQueue = (): Queue<EmailJob> => {
           type: "exponential",
           delay: 5_000,
         },
-        removeOnComplete: true,
+        removeOnComplete: {
+          age: 3600, // Keep completed jobs for 1 hour
+          count: 1000, // Keep max 1000 completed jobs
+        },
+        removeOnFail: {
+          age: 7 * 24 * 3600, // Keep failed jobs for 7 days
+        },
       },
     });
   }

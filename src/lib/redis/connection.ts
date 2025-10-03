@@ -9,6 +9,21 @@ const buildOptions = (): RedisOptions => {
   const options: RedisOptions = {
     lazyConnect: false,
     maxRetriesPerRequest: null,
+    connectTimeout: 10000, // 10 seconds
+    enableReadyCheck: true,
+    retryStrategy: (times) => {
+      if (times > 3) {
+        console.error(
+          "[redis] Max connection retry attempts reached. Connection failed."
+        );
+        return null; // Stop retrying
+      }
+      const delay = Math.min(times * 200, 2000);
+      console.log(
+        `[redis] Retrying connection in ${delay}ms... (attempt ${times}/3)`
+      );
+      return delay;
+    },
   };
 
   if (tlsEnabled) {
