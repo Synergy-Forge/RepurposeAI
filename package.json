@@ -58,7 +58,7 @@
     "ffmpeg-static": "^5.2.0",
     "file-type": "^19.6.0",
     "ioredis": "^5.8.0",
-    "lucide-react": "^0.540.0",
+    "lucide-react": "^0.544.0",
     "multer": "^2.0.2",
     "next": "15.5.0",
     "next-auth": "^4.24.11",
