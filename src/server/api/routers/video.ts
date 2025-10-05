@@ -307,7 +307,7 @@ export const videoRouter = createTRPCRouter({
 
         // Process video to extract key moments
         const processedClips = await processVideoToExtractKeyMoments(
-          resolveStoredPath(video.originalUrl)
+          resolveStoredPath(video.originalUrl.replace(/^\//, ""))
         );
 
         // Save processed clips to database
