@@ -10,7 +10,13 @@ echo "-- Generating Prisma client..."
 npx prisma generate
 
 echo "-- Deploying database migrations..."
-npx prisma migrate deploy
+# Check if there are pending migrations before deploying
+if npx prisma migrate status | grep -q "Database schema is up to date"; then
+  echo "Database schema is already up to date, skipping migrations"
+else
+  echo "Applying pending migrations..."
+  npx prisma migrate deploy
+fi
 
 echo "-- Building application..."
 npm run build

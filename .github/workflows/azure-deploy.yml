@@ -79,4 +79,4 @@ jobs:
           az webapp config set \
             --name repurposeai-webapp \
             --resource-group repurposeai-rg \
-            --startup-file "npx prisma migrate deploy && node .next/standalone/server.js"
+            --startup-file "node .next/standalone/server.js"
