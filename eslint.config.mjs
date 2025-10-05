@@ -17,18 +17,20 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "build/**",
+      "dist/**",
+      "coverage/**",
       "next-env.d.ts",
-      "**/app/page.tsx"
+      "**/app/page.tsx",
     ],
   },
   {
     rules: {
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
-      ]
-    }
-  }
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

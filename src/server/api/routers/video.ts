@@ -1,10 +1,39 @@
-import { z } from 'zod';
-import { createTRPCRouter, protectedProcedure } from '@/lib/trpc';
-import { processVideoToExtractKeyMoments } from '@/lib/video-processing';
-import { writeFile, unlink } from 'fs/promises';
-import { join } from 'path';
-import { tmpdir } from 'os';
-import { randomUUID } from 'crypto';
+import { z } from "zod";
+import { createTRPCRouter, protectedProcedure } from "@/lib/trpc";
+import { processVideoToExtractKeyMoments } from "@/lib/video-processing";
+import { statfs, writeFile, unlink } from "fs/promises";
+import { randomUUID } from "crypto";
+import { fileTypeFromBuffer } from "file-type";
+import { dirname } from "path";
+import { TRPCError } from "@trpc/server";
+import {
+  ensureDirectory,
+  storagePaths,
+  buildUploadsPath,
+  toPublicUrl,
+  resolveStoredPath,
+} from "@/lib/storage";
+
+const MB = 1024 * 1024;
+const GB = MB * 1024;
+const MIN_FREE_DISK_AFTER_UPLOAD = 500 * MB;
+
+const SUBSCRIPTION_UPLOAD_LIMITS: Record<string, number> = {
+  free: 100 * MB,
+  basic: 500 * MB,
+  pro: 2 * GB,
+  enterprise: 5 * GB,
+  default: 500 * MB,
+};
+
+const ALLOWED_VIDEO_MIME_TYPES = new Set<string>([
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/x-matroska",
+  "video/x-msvideo",
+  "video/avi",
+]);
 
 const uploadVideoSchema = z.object({
   title: z.string().min(1),
@@ -16,6 +45,68 @@ const processVideoSchema = z.object({
   videoId: z.string(),
 });
 
+async function safeUnlink(filePath: string) {
+  try {
+    await unlink(filePath);
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    if (err?.code !== "ENOENT") {
+      console.error(`Error removing file at ${filePath}:`, error);
+    }
+  }
+}
+
+function formatBytes(bytes: number) {
+  if (bytes === 0) return "0B";
+  const units = ["B", "KB", "MB", "GB", "TB"] as const;
+  const exponent = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1
+  );
+  const value = bytes / Math.pow(1024, exponent);
+  return `${value.toFixed(2)}${units[exponent]}`;
+}
+
+async function assertSufficientDiskSpace(
+  absoluteTargetPath: string,
+  requiredBytes: number
+) {
+  const targetDir = dirname(absoluteTargetPath);
+
+  try {
+    const stats = await statfs(targetDir);
+    const availableBytes = stats.bavail * stats.bsize;
+
+    if (availableBytes - requiredBytes < MIN_FREE_DISK_AFTER_UPLOAD) {
+      const requiredTotal = requiredBytes + MIN_FREE_DISK_AFTER_UPLOAD;
+      throw new TRPCError({
+        code: "SERVICE_UNAVAILABLE",
+        message: `Insufficient disk space. Available: ${formatBytes(
+          availableBytes
+        )}, required: ${formatBytes(requiredTotal)}`,
+      });
+    }
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    if (err?.code === "ENOSYS" || err?.code === "EINVAL") {
+      console.warn(
+        `[video:upload] Disk space check not supported on this platform (${err.code}). Skipping validation.`
+      );
+      return;
+    }
+
+    if (error instanceof TRPCError) {
+      throw error;
+    }
+
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to verify disk space availability",
+      cause: error,
+    });
+  }
+}
+
 export const videoRouter = createTRPCRouter({
   uploadVideo: protectedProcedure
     .input(uploadVideoSchema)
@@ -23,33 +114,83 @@ export const videoRouter = createTRPCRouter({
       const { title, description, videoData } = input;
       const userId = ctx.session.user.id;
 
-      // Decode base64 video data
-      const videoBuffer = Buffer.from(videoData, 'base64');
-      
-      // Validate video size (max 500MB)
-      const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB in bytes
-      if (videoBuffer.length > MAX_VIDEO_SIZE) {
-        throw new Error(
-          `Video size (${(videoBuffer.length / 1024 / 1024).toFixed(2)}MB) exceeds maximum allowed size of 500MB`
-        );
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          subscriptionStatus: true,
+        },
+      });
+
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
       }
-      
-      const videoFileName = `${randomUUID()}.mp4`;
-      const videoPath = join(tmpdir(), videoFileName);
+
+      // Decode base64 video data
+      const videoBuffer = Buffer.from(videoData, "base64");
+
+      const detectedType = await fileTypeFromBuffer(videoBuffer);
+
+      if (!detectedType || !ALLOWED_VIDEO_MIME_TYPES.has(detectedType.mime)) {
+        const allowedFormats = Array.from(ALLOWED_VIDEO_MIME_TYPES)
+          .map((type) => type.split("/")[1])
+          .join(", ");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Unsupported video format${
+            detectedType?.mime ? ` (${detectedType.mime})` : ""
+          }. Allowed formats: ${allowedFormats}`,
+        });
+      }
+
+      const subscriptionPlan = user.subscriptionStatus?.toLowerCase() ?? "free";
+      const maxUploadSizeBytes =
+        SUBSCRIPTION_UPLOAD_LIMITS[subscriptionPlan] ??
+        SUBSCRIPTION_UPLOAD_LIMITS.default;
+
+      if (videoBuffer.length > maxUploadSizeBytes) {
+        const sizeInMb = (videoBuffer.length / MB).toFixed(2);
+        const limitInMb = (maxUploadSizeBytes / MB).toFixed(0);
+        throw new TRPCError({
+          code: "PAYLOAD_TOO_LARGE",
+          message: `Video size (${sizeInMb}MB) exceeds the ${subscriptionPlan} plan limit of ${limitInMb}MB`,
+        });
+      }
+
+      const videoFileExtension = detectedType.ext ?? "mp4";
+      const videoFileName = `${randomUUID()}.${videoFileExtension}`;
+      const relativeVideoPath = buildUploadsPath(
+        "uploads",
+        "videos",
+        videoFileName
+      );
+      const absoluteVideoPath = resolveStoredPath(relativeVideoPath);
+
+      await ensureDirectory(storagePaths.originalsDir);
+      await assertSufficientDiskSpace(absoluteVideoPath, videoBuffer.length);
+
+      let persistedVideoPath: string | null = null;
 
       try {
-        // Save video to temporary storage
-        await writeFile(videoPath, videoBuffer);
+        console.info("[video:upload] starting", {
+          userId,
+          title,
+          subscriptionPlan,
+          sizeBytes: videoBuffer.length,
+        });
 
-        // Create video record in database
+        await writeFile(absoluteVideoPath, videoBuffer);
+        persistedVideoPath = absoluteVideoPath;
+
+        const publicVideoUrl = toPublicUrl(relativeVideoPath);
+
         const video = await ctx.prisma.video.create({
           data: {
             id: randomUUID(),
             title,
             description,
-            originalUrl: videoPath,
+            originalUrl: publicVideoUrl,
             userId,
-            status: 'uploading',
+            status: "uploading",
             updatedAt: new Date(),
           },
         });
@@ -57,11 +198,26 @@ export const videoRouter = createTRPCRouter({
         return {
           success: true,
           videoId: video.id,
-          message: 'Video uploaded successfully',
+          message: "Video uploaded successfully",
         };
       } catch (error) {
-        console.error('Error uploading video:', error);
-        throw new Error('Failed to upload video');
+        if (persistedVideoPath) {
+          await safeUnlink(persistedVideoPath);
+        }
+        console.error("[video:upload] failed", {
+          userId,
+          error,
+        });
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to upload video",
+          cause: error,
+        });
       }
     }),
 
@@ -82,14 +238,15 @@ export const videoRouter = createTRPCRouter({
       });
 
       if (!user) {
-        throw new Error('User not found');
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
       }
 
       // Enforce quota limit
       if (user.videosProcessed >= user.videoQuotaLimit) {
-        throw new Error(
-          `Video processing quota exceeded. You have processed ${user.videosProcessed}/${user.videoQuotaLimit} videos. Please upgrade your plan to process more videos.`
-        );
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Video processing quota exceeded. You have processed ${user.videosProcessed}/${user.videoQuotaLimit} videos. Please upgrade your plan to process more videos.`,
+        });
       }
 
       // Get video from database
@@ -101,19 +258,56 @@ export const videoRouter = createTRPCRouter({
       });
 
       if (!video) {
-        throw new Error('Video not found');
+        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
       }
 
+      let quotaReserved = false;
+      let processingSucceeded = false;
+
+      const reserveResult = Number(
+        await ctx.prisma.$executeRaw`
+          UPDATE "User"
+          SET "videosProcessed" = "videosProcessed" + 1
+          WHERE "id" = ${userId} AND "videosProcessed" < "videoQuotaLimit"
+        `
+      );
+
+      if (reserveResult === 0) {
+        const latestUser = await ctx.prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            videosProcessed: true,
+            videoQuotaLimit: true,
+          },
+        });
+
+        const processedCount =
+          latestUser?.videosProcessed ?? user.videosProcessed;
+        const quotaLimit = latestUser?.videoQuotaLimit ?? user.videoQuotaLimit;
+
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Video processing quota exceeded. You have processed ${processedCount}/${quotaLimit} videos. Please upgrade your plan to process more videos.`,
+        });
+      }
+
+      quotaReserved = true;
+
       try {
+        console.info("[video:process] starting", {
+          userId,
+          videoId,
+        });
+
         // Update video status to processing
         await ctx.prisma.video.update({
           where: { id: videoId },
-          data: { status: 'processing' },
+          data: { status: "processing" },
         });
 
         // Process video to extract key moments
         const processedClips = await processVideoToExtractKeyMoments(
-          video.originalUrl
+          resolveStoredPath(video.originalUrl)
         );
 
         // Save processed clips to database
@@ -138,33 +332,62 @@ export const videoRouter = createTRPCRouter({
         // Update video status to completed
         await ctx.prisma.video.update({
           where: { id: videoId },
-          data: { status: 'completed' },
+          data: { status: "completed" },
         });
 
-        // Increment user's processed videos counter
-        await ctx.prisma.user.update({
-          where: { id: userId },
-          data: {
-            videosProcessed: {
-              increment: 1,
-            },
-          },
+        processingSucceeded = true;
+
+        console.info("[video:process] completed", {
+          userId,
+          videoId,
+          clipCount: savedClips.length,
         });
 
         return {
           success: true,
           clips: savedClips,
-          message: 'Video processed successfully',
+          message: "Video processed successfully",
         };
       } catch (error) {
-        // Update video status to failed
-        await ctx.prisma.video.update({
-          where: { id: videoId },
-          data: { status: 'failed' },
+        try {
+          await ctx.prisma.video.update({
+            where: { id: videoId },
+            data: { status: "failed" },
+          });
+        } catch (statusError) {
+          console.error("Error updating video status to failed:", statusError);
+        }
+
+        console.error("[video:process] failed", {
+          userId,
+          videoId,
+          error,
         });
 
-        console.error('Error processing video:', error);
-        throw new Error('Failed to process video');
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to process video",
+          cause: error,
+        });
+      } finally {
+        if (quotaReserved && !processingSucceeded) {
+          try {
+            await ctx.prisma.user.update({
+              where: { id: userId },
+              data: {
+                videosProcessed: {
+                  decrement: 1,
+                },
+              },
+            });
+          } catch (quotaError) {
+            console.error("Error rolling back video quota:", quotaError);
+          }
+        }
       }
     }),
 
@@ -176,7 +399,7 @@ export const videoRouter = createTRPCRouter({
       include: {
         videoClips: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return videos;
@@ -199,7 +422,7 @@ export const videoRouter = createTRPCRouter({
       });
 
       if (!video) {
-        throw new Error('Video not found');
+        throw new Error("Video not found");
       }
 
       return video;
@@ -217,10 +440,13 @@ export const videoRouter = createTRPCRouter({
           id: videoId,
           userId,
         },
+        include: {
+          videoClips: true,
+        },
       });
 
       if (!video) {
-        throw new Error('Video not found');
+        throw new Error("Video not found");
       }
 
       try {
@@ -229,16 +455,25 @@ export const videoRouter = createTRPCRouter({
           where: { id: videoId },
         });
 
-        // Clean up video file
-        await unlink(video.originalUrl);
+        const fileTargets = [
+          video.originalUrl,
+          ...(video.videoClips ?? []).map((clip) => clip.videoUrl),
+        ]
+          .filter(
+            (storedPath): storedPath is string =>
+              Boolean(storedPath) && !/^https?:\/\//i.test(storedPath)
+          )
+          .map((storedPath) => resolveStoredPath(storedPath));
+
+        await Promise.all(fileTargets.map((path) => safeUnlink(path)));
 
         return {
           success: true,
-          message: 'Video deleted successfully',
+          message: "Video deleted successfully",
         };
       } catch (error) {
-        console.error('Error deleting video:', error);
-        throw new Error('Failed to delete video');
+        console.error("Error deleting video:", error);
+        throw new Error("Failed to delete video");
       }
     }),
 });

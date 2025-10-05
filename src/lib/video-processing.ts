@@ -7,6 +7,14 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
+import { unlink as removeFile } from 'fs/promises';
+import {
+  ensureDirectory,
+  storagePaths,
+  buildUploadsPath,
+  toPublicUrl,
+  resolveStoredPath,
+} from '@/lib/storage';
 import { getTranscription } from './transcription';
 import { Transcription } from 'openai/resources/audio/transcriptions';
 
@@ -229,42 +237,49 @@ export async function createVideoClip(
 // The main "orchestrator". This function ties everything together. It is
 // called by your tRPC router and executes each step of the pipeline in the correct order.
 export async function processVideoToExtractKeyMoments(videoPath: string): Promise<ProcessedClip[]> {
+  let audioPath: string | null = null;
+  const createdClipPaths: string[] = [];
+
   try {
     console.log("Step 1: Extracting audio...");
-    const audioPath = await extractAudioFromVideo(videoPath);
-    
+    audioPath = await extractAudioFromVideo(videoPath);
+
     console.log("Step 2: Transcribing audio...");
     const transcript = await getTranscription(audioPath, { format: 'verbose_json' }) as VerboseTranscription;
-    
+
     console.log("Step 3: Generating key moments with AI...");
     const keyMoments = await generateKeyMoments(transcript);
-    
+
     console.log(`Step 4: Found ${keyMoments.length} key moments. Creating clips...`);
+    await ensureDirectory(storagePaths.clipsDir);
     const processedClips: ProcessedClip[] = [];
     const aspectRatios = ['9:16']; // Focusing on one aspect ratio for simplicity
-    
+
     for (const moment of keyMoments) {
       for (const aspectRatio of aspectRatios) {
         const clipId = randomUUID();
-        const outputPath = join(tmpdir(), `${clipId}_${aspectRatio}.mp4`);
+        const clipFileName = `${clipId}_${aspectRatio}.mp4`;
+        const relativeClipPath = buildUploadsPath('uploads', 'clips', clipFileName);
+        const outputPath = resolveStoredPath(relativeClipPath);
         const momentText = transcript.segments
-            .filter(seg => seg.start >= moment.startTime && seg.end <= moment.endTime)
-            .map(seg => seg.text)
-            .join(' ');
-            
+          .filter(seg => seg.start >= moment.startTime && seg.end <= moment.endTime)
+          .map(seg => seg.text)
+          .join(' ');
+
         console.log(`  - Generating caption for moment: "${moment.title}"`);
         const captions = await generateCaptionsForClip(moment.title, moment.description, momentText);
 
         console.log(`  - Creating video clip for moment: "${moment.title}"`);
         await createVideoClip(videoPath, moment.startTime, moment.endTime, aspectRatio, outputPath, captions);
-        
+        createdClipPaths.push(relativeClipPath);
+
         processedClips.push({
           title: moment.title,
           description: moment.description,
           startTime: moment.startTime,
           endTime: moment.endTime,
           aspectRatio,
-          videoUrl: outputPath,
+          videoUrl: toPublicUrl(relativeClipPath),
           captions,
           hashtags: moment.hashtags.join(' '),
         });
@@ -273,8 +288,17 @@ export async function processVideoToExtractKeyMoments(videoPath: string): Promis
     console.log("Step 5: Finished creating all clips.");
     return processedClips;
   } catch (error) {
+    await Promise.all(
+      createdClipPaths.map((relativePath) =>
+        removeFile(resolveStoredPath(relativePath)).catch(() => undefined)
+      )
+    );
     console.error('FATAL ERROR in video processing pipeline:', error);
     throw error;
+  } finally {
+    if (audioPath) {
+      await removeFile(audioPath).catch(() => undefined);
+    }
   }
 }
 

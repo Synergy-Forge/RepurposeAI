@@ -11,6 +11,7 @@ Completely refactored and modernized the RepurposeAI landing page, transforming 
 ### 1. Component-Based Architecture
 
 **Location**: `src/components/landing/`
+
 - **`Navigation.tsx`**: Modern header with NextAuth.js integration, responsive mobile menu, and dynamic authentication states
 - **`Hero.tsx`**: Engaging hero section with custom fire animation and parallax effects
 - **`Features.tsx`**: Interactive features grid with Cloudinary video background and hover animations
@@ -21,6 +22,7 @@ Completely refactored and modernized the RepurposeAI landing page, transforming 
 ### 2. Visual Design & Animations
 
 **Custom CSS System**: `src/styles/landing.css`
+
 - **Fire Animation**: Custom keyframe animation for the "reborn" text with glowing text shadow effects
 - **Gradient Backgrounds**: Multi-color gradient system with fixed attachment for parallax effects
 - **Glass Morphism**: Header with backdrop blur and transparency effects
@@ -29,6 +31,7 @@ Completely refactored and modernized the RepurposeAI landing page, transforming 
 ### 3. Next.js 14 Integration
 
 **Modern App Router Implementation**:
+
 - **Metadata Optimization**: Professional SEO configuration with proper title, description, and keywords
 - **TypeScript Integration**: Full type safety across all components and props
 - **Performance Optimization**: Optimized imports and component structure for fast loading
@@ -37,6 +40,7 @@ Completely refactored and modernized the RepurposeAI landing page, transforming 
 ### 4. Authentication & User Experience
 
 **NextAuth.js Integration**:
+
 - **Dynamic Navigation**: Shows different states for authenticated vs unauthenticated users
 - **Smart Redirects**: Authenticated users directed to dashboard, new users to registration
 - **Session Management**: Proper session handling with loading states and error handling
@@ -45,6 +49,7 @@ Completely refactored and modernized the RepurposeAI landing page, transforming 
 ### 5. Content Localization & Optimization
 
 **Professional Copy Enhancement**:
+
 - **Language Translation**: Converted all Portuguese content to professional English
 - **Marketing Copy**: Engaging, conversion-focused content for content creators and video professionals
 - **Feature Descriptions**: Updated to accurately reflect current application capabilities
@@ -58,24 +63,28 @@ Completely refactored and modernized the RepurposeAI landing page, transforming 
 // Enhanced tailwind.config.ts with custom text shadow utilities
 plugins: [
   plugin(function ({ matchUtilities }) {
-    matchUtilities({
-      'text-shadow': (value) => ({
-        textShadow: value,
-      }),
-    }, {
-      values: {
-        sm: '0 1px 2px rgba(0, 0, 0, 0.5)',
-        DEFAULT: '0 2px 4px rgba(0, 0, 0, 0.5)',
-        lg: '0 4px 15px rgba(0, 0, 0, 0.5)',
+    matchUtilities(
+      {
+        "text-shadow": (value) => ({
+          textShadow: value,
+        }),
       },
-    });
+      {
+        values: {
+          sm: "0 1px 2px rgba(0, 0, 0, 0.5)",
+          DEFAULT: "0 2px 4px rgba(0, 0, 0, 0.5)",
+          lg: "0 4px 15px rgba(0, 0, 0, 0.5)",
+        },
+      }
+    );
   }),
-]
+];
 ```
 
 ### Cloudinary Video Integration
 
 **Performance Optimization**:
+
 - **Video Hosting**: Migrated from local video files to Cloudinary CDN
 - **Auto-Optimization**: Added `q_auto` and `f_auto` parameters for automatic quality and format optimization
 - **Global CDN**: Improved loading performance across all geographical regions
@@ -84,6 +93,7 @@ plugins: [
 ### Component Structure & Reusability
 
 **Modern React Patterns**:
+
 - **Interface-Driven Development**: TypeScript interfaces for all component props
 - **Composition Pattern**: Reusable components with proper prop drilling
 - **Performance Optimized**: Efficient re-rendering with proper React hooks usage
@@ -94,6 +104,7 @@ plugins: [
 ### Dependency Management
 
 **Resolved CI/CD Issues**:
+
 - **Missing Dependencies**: Added `react-dropzone` and `chart.js` packages for dashboard components
 - **ESLint Compliance**: Fixed all TypeScript and linting errors for production build
 - **Build Success**: Achieved successful production build with optimized bundle sizes
@@ -101,6 +112,7 @@ plugins: [
 ### Route Optimization
 
 **Static Generation Results**:
+
 ```
 Route (app)                     Size     First Load JS
 ├ ○ /                          3.97 kB   118 kB
@@ -120,6 +132,7 @@ Route (app)                     Size     First Load JS
 ### Legacy Component Removal
 
 **Clean Architecture**:
+
 - **Removed Old Components**: Eliminated outdated `Header.tsx`, `Hero.tsx`, `Features.tsx`, `HowItWorks.tsx`, `Pricing.tsx`, `CTA.tsx`, and `Footer.tsx`
 - **Organized Structure**: New components properly organized in `landing/` subdirectory
 - **Import Updates**: Updated all import statements to use new component locations
@@ -127,6 +140,7 @@ Route (app)                     Size     First Load JS
 ### Documentation Updates
 
 **Comprehensive Documentation**:
+
 - **README.md**: Updated project structure, tech stack, and setup instructions
 - **Architecture Documentation**: Detailed component hierarchy and integration points
 - **Development Guide**: Clear instructions for local development and deployment
@@ -136,6 +150,7 @@ Route (app)                     Size     First Load JS
 ### Responsive Design Excellence
 
 **Mobile-First Approach**:
+
 - **Breakpoint Strategy**: Optimized for mobile (< 640px), tablet (640px-1024px), and desktop (> 1024px)
 - **Touch Interactions**: Proper touch targets and mobile navigation patterns
 - **Performance**: Optimized loading and rendering across all device types
@@ -143,6 +158,7 @@ Route (app)                     Size     First Load JS
 ### Interactive Elements
 
 **Engagement Features**:
+
 - **Smooth Scroll**: CSS scroll-behavior for seamless navigation
 - **Hover Effects**: Professional hover animations on cards and buttons
 - **Loading States**: Proper loading indicators and transitions
@@ -151,6 +167,7 @@ Route (app)                     Size     First Load JS
 ### Accessibility Improvements
 
 **WCAG Compliance**:
+
 - **Semantic HTML**: Proper heading hierarchy and semantic elements
 - **Keyboard Navigation**: Full keyboard accessibility throughout
 - **Screen Reader Support**: ARIA labels and proper focus management
@@ -167,7 +184,7 @@ html {
 }
 
 body {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   background-color: black;
   color: white;
   overflow-x: hidden;
@@ -177,6 +194,7 @@ body {
 ### Layout Integration
 
 **Root Layout Updates**:
+
 - **Custom CSS Import**: Added `@/styles/landing.css` to layout imports
 - **Font Optimization**: Space Grotesk font loading with proper fallbacks
 - **Global Styles**: Enhanced base styles for consistent theming
@@ -238,6 +256,7 @@ Implemented a complete email infrastructure for RepurposeAI, including transacti
 ### 2. Email Service Implementation
 
 **Location**: `src/lib/email/`
+
 - **`config.ts`**: Core email configuration with ZeptoMail API integration
 - **`index.ts`**: Main email service with queue management and sending capabilities
 - **`queue.ts`**: BullMQ queue implementation for asynchronous email processing
@@ -246,6 +265,7 @@ Implemented a complete email infrastructure for RepurposeAI, including transacti
 ### 3. Email Providers
 
 **Location**: `src/lib/email/providers/`
+
 - **`zeptomail.ts`**: ZeptoMail provider implementation with API integration
 - Configurable provider system allowing easy switching between email services
 
@@ -254,6 +274,7 @@ Implemented a complete email infrastructure for RepurposeAI, including transacti
 **Location**: `src/lib/email/templates/`
 
 #### Template Categories:
+
 - **Authentication Templates** (`auth/`):
   - `WelcomeEmail.tsx`: User welcome and onboarding emails
 
@@ -267,12 +288,14 @@ Implemented a complete email infrastructure for RepurposeAI, including transacti
   - User engagement and marketing communications
 
 #### Template Components:
+
 - **`BaseTemplate.tsx`**: Reusable email template wrapper with consistent styling
 - Modular component system for consistent email branding
 
 ### 5. Server-Side Integration
 
 **Location**: `src/server/api/routers/email.ts`
+
 - **tRPC Router**: Email API endpoints for sending emails programmatically
 - **Queue Integration**: Direct integration with email queue for processing
 - **Type Safety**: Full TypeScript support for email operations
@@ -280,6 +303,7 @@ Implemented a complete email infrastructure for RepurposeAI, including transacti
 ### 6. Testing Infrastructure
 
 **Location**: `src/lib/email/`
+
 - **`test-email.ts`**: Email testing utilities
 - **`test-structure.ts` & `test-structure-fixed.ts`**: Template structure validation
 - Comprehensive testing suite for email functionality
@@ -290,14 +314,14 @@ Implemented a complete email infrastructure for RepurposeAI, including transacti
 
 ```typescript
 // Asynchronous email processing with BullMQ
-const emailQueue = new Queue('email-queue', {
-  connection: redisConnection
+const emailQueue = new Queue("email-queue", {
+  connection: redisConnection,
 });
 
 // Email job processing with error handling and retries
-await emailQueue.add('send-email', emailData, {
+await emailQueue.add("send-email", emailData, {
   attempts: 3,
-  backoff: { type: 'exponential', delay: 5000 }
+  backoff: { type: "exponential", delay: 5000 },
 });
 ```
 
@@ -314,47 +338,55 @@ await emailQueue.add('send-email', emailData, {
 // ZeptoMail configuration
 const emailConfig = {
   apiKey: process.env.ZEPTOMAIL_API_KEY,
-  baseUrl: 'https://api.zeptomail.com/v1.1/email/template',
-  templateNamespace: 'repurposeai'
+  baseUrl: "https://api.zeptomail.com/v1.1/email/template",
+  templateNamespace: "repurposeai",
 };
 ```
 
 ## Integration Points
 
 ### 1. User Registration Flow
+
 - Automated welcome emails upon user registration
 - Email verification and account setup instructions
 
 ### 2. Video Processing Workflow
+
 - Processing completion notifications
 - Error handling and user support communications
 
 ### 3. Subscription Management
+
 - Subscription activation confirmations
 - Payment and billing communications
 
 ### 4. System Notifications
+
 - Administrative alerts and system status updates
 - User engagement campaigns
 
 ## Benefits Achieved
 
 ### Scalability
+
 - **Asynchronous Processing**: Email sending won't block user requests
 - **Queue Management**: Handle high-volume email campaigns efficiently
 - **Retry Logic**: Automatic retry for failed email deliveries
 
 ### Reliability
+
 - **Error Handling**: Comprehensive error handling and logging
 - **Provider Redundancy**: Easy switching between email providers
 - **Testing Suite**: Robust testing ensures email functionality works correctly
 
 ### User Experience
+
 - **Professional Templates**: Branded, responsive email designs
 - **Timely Notifications**: Users receive important updates automatically
 - **Personalization**: Dynamic content based on user preferences and actions
 
 ### Developer Experience
+
 - **Type Safety**: Full TypeScript support prevents runtime errors
 - **Modular Architecture**: Easy to extend and maintain
 - **Testing Tools**: Comprehensive testing utilities for development
@@ -362,6 +394,7 @@ const emailConfig = {
 ## Environment Configuration
 
 Required environment variables for email functionality:
+
 ```env
 ZEPTOMAIL_API_KEY=your_zeptomail_api_key
 REDIS_URL=redis://localhost:6379
@@ -409,11 +442,13 @@ Successfully resolved critical deployment issues and implemented a production-re
 - **Solution**: Implemented complete webhook system with 20+ essential Stripe events:
 
 #### Customer Events (3 events)
+
 - `customer.created` - New customer registration
 - `customer.updated` - Customer information changes
 - `customer.deleted` - Customer account deletion
 
 #### Subscription Events (5 events)
+
 - `customer.subscription.created` - New subscription activation
 - `customer.subscription.updated` - Subscription modifications
 - `customer.subscription.deleted` - Subscription cancellation/termination
@@ -421,21 +456,25 @@ Successfully resolved critical deployment issues and implemented a production-re
 - `customer.subscription.resumed` - Subscription reactivation
 
 #### Invoice Events (4 events)
+
 - `invoice.payment_succeeded` - Successful payment processing
 - `invoice.payment_failed` - Failed payment attempts
 - `invoice.finalized` - Invoice completion
 - `invoice.upcoming` - Upcoming payment notifications
 
 #### Payment Events (3 events)
+
 - `payment_intent.succeeded` - Payment completion
 - `payment_intent.payment_failed` - Payment failure
 - `payment_intent.canceled` - Payment cancellation
 
 #### Checkout Events (2 events)
+
 - `checkout.session.completed` - Successful checkout completion
 - `checkout.session.expired` - Expired checkout sessions
 
 #### Price Events (3 events)
+
 - `price.created` - New pricing creation
 - `price.updated` - Pricing modifications
 - `price.deleted` - Pricing removal
@@ -459,6 +498,7 @@ Successfully resolved critical deployment issues and implemented a production-re
 ## Build & Deployment Verification
 
 ### Successful Build Results
+
 - ✅ **Compilation**: ✓ Compiled successfully in 12.5s
 - ✅ **TypeScript**: ✓ Linting and checking validity of types passed
 - ✅ **Pages**: ✓ All 11 pages generated successfully
@@ -466,6 +506,7 @@ Successfully resolved critical deployment issues and implemented a production-re
 - ✅ **Optimization**: ✓ Finalizing page optimization completed
 
 ### Environment Variables Required
+
 ```env
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
@@ -489,16 +530,19 @@ DATABASE_URL=postgresql://...
 ## Benefits Achieved
 
 ### Reliability Improvements
+
 - **Complete event coverage** ensures no subscription state is missed
 - **Robust error handling** prevents webhook failures from breaking the application
 - **Comprehensive logging** enables effective monitoring and debugging
 
 ### Scalability Enhancements
+
 - **Modular architecture** supports easy addition of new event handlers
 - **Efficient event routing** minimizes processing overhead
 - **Database optimization** ensures fast user subscription updates
 
 ### Security & Compliance
+
 - **Webhook signature verification** prevents unauthorized requests
 - **Secure environment variable management** protects sensitive credentials
 - **Type-safe processing** reduces runtime errors
@@ -857,12 +901,30 @@ This setup significantly improves our development process by:
 - **Refactored navigation component for proper spacing and accessibility.**  
   Introduced responsive `gap` utilities (`gap-4` on mobile, `md:gap-8` on desktop) to ensure menu items are evenly spaced and visually consistent across breakpoints. Also normalized the `href` for "How It Works" to avoid issues with spaces in fragment identifiers.
 
-# Felipe Abe- (02/10/2025)
+# Felipe Abe - (02/10/2025)
 
 ### Implementation of Redis queue infrastructure with end-to-end testing and security hardening for scalable asynchronous processing.
 
 - **Set up BullMQ-based job queue using Redis Streams, configured for at-least-once semantics with exponential backoff retries (3 attempts, 5s initial delay) and no DLQ, ensuring reliable email processing and future scalability.**
 
-- **Developed isolated end-to-end test harness in [`e2e-bullmq`](e2e-bullmq ) folder, simulating normal job processing, controlled failures, connection faults, and metrics collection, all running deterministically against Azure Redis with TLS and AUTH.**
+- **Developed isolated end-to-end test harness in [`e2e-bullmq`](e2e-bullmq) folder, simulating normal job processing, controlled failures, connection faults, and metrics collection, all running deterministically against Azure Redis with TLS and AUTH.**
 
 - **Applied security best practices including credential sanitization in logs, mandatory TLS enforcement in production, PII-free payload summaries, and centralized connection management to prevent exposure and ensure idempotent, Windows-friendly operations.**
+
+# Felipe Abe - (04/10/2025)
+
+### Quota Fields Testing Infrastructure: Automated Validation for Cost Control System
+
+Created automated testing script to validate the new quota enforcement system, ensuring reliable cost control and preventing runtime errors in production.
+
+- **Automated Validation**: Script to verify Prisma Client recognizes new quota fields (`videosProcessed`, `videoQuotaLimit`)
+- **Type System Testing**: Validates TypeScript compilation and field accessibility
+- **Database Operations**: Tests quota increment operations work correctly
+- **CI/CD Ready**: Can be integrated into deployment pipelines to prevent broken quota system deployments
+- **Command**: `npx tsx scripts/test-quota-fields.ts`
+
+This testing infrastructure ensures the cost optimization measures will function correctly in production and prevent unexpected billing scenarios.
+
+### CI Lint Error Fix: Resolved Build Output Linting Issue After Last Deploy
+
+Resolved a CI/CD pipeline issue where ESLint was incorrectly linting the build output (`dist/`), causing errors related to `require()` usage in compiled files. Added a `.eslintignore` file to exclude both `dist/` and `node_modules/` from linting, ensuring that only source files are checked. This fix restores clean CI runs and prevents false-positive lint errors on deploy.
