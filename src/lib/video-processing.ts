@@ -290,14 +290,14 @@ export async function processVideoToExtractKeyMoments(videoPath: string): Promis
   } catch (error) {
     await Promise.all(
       createdClipPaths.map((relativePath) =>
-        removeFile(resolveStoredPath(relativePath)).catch(() => undefined)
+        removeFile(resolveStoredPath(relativePath)).catch(err => console.error('Failed to remove clip file during cleanup:', err))
       )
     );
     console.error('FATAL ERROR in video processing pipeline:', error);
     throw error;
   } finally {
     if (audioPath) {
-      await removeFile(audioPath).catch(() => undefined);
+      await removeFile(audioPath).catch(err => console.error('Failed to remove audio file during cleanup:', err));
     }
   }
 }
