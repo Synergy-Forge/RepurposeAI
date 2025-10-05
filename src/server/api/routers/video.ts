@@ -306,6 +306,12 @@ export const videoRouter = createTRPCRouter({
         });
 
         // Process video to extract key moments
+        if (!video.originalUrl) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Video originalUrl is missing.",
+          });
+        }
         const processedClips = await processVideoToExtractKeyMoments(
           resolveStoredPath(video.originalUrl.replace(/^\//, ""))
         );
