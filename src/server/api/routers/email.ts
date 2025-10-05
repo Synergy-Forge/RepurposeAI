@@ -4,9 +4,11 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "@/lib/trpc";
-import { emailQueue } from "@/lib/queues/emailQueue";
+import { enqueueEmail } from "@/lib/queues/emailQueue";
 import { EmailService } from "@/lib/email";
 import { EmailType } from "@/lib/email/types";
+import { getEmailConfig } from "@/lib/email/config";
+import type { EmailOptions } from "@/lib/email/providers/zeptomail";
 
 const emailPreferencesSchema = z.object({
   marketingEmails: z.boolean(),
@@ -107,13 +109,25 @@ export const emailRouter = createTRPCRouter({
       z.object({
         to: z.string().email(),
         subject: z.string().min(1),
-        template: z.string().optional(),
-        data: z.record(z.unknown()).optional(),
+        html: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
-      const job = await emailQueue.add("send", input, {
-        attempts: 3,
+    .mutation(async ({ ctx, input }) => {
+      const config = getEmailConfig();
+
+      const options: EmailOptions = {
+        to: input.to,
+        subject: input.subject,
+        html:
+          input.html ??
+          `<p>${input.subject}</p><p>Sent via Repurpose AI testing endpoint.</p>`,
+        from: `${config.fromName} <${config.fromEmail}>`,
+      };
+
+      const job = await enqueueEmail({
+        userId: ctx.session.user.id,
+        type: EmailType.FEATURE_ANNOUNCEMENT,
+        options,
       });
 
       return { jobId: job.id };

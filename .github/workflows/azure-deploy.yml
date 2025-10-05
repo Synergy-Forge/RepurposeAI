@@ -8,6 +8,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for OIDC
+      contents: read
 
     steps:
       - name: Checkout code
@@ -19,10 +22,12 @@ jobs:
           node-version: "20.x"
           cache: "npm"
 
-      - name: Azure Login
-        uses: azure/login@v1
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Run build script
         run: |
@@ -40,21 +45,38 @@ jobs:
 
       - name: Prepare standalone deployment
         run: |
-          # Copy static files to standalone directory
+          cp package.json .next/standalone/
+          cp package-lock.json .next/standalone/
           cp -r .next/static .next/standalone/.next/static
           cp -r public .next/standalone/public
-          # Copy prisma directory for database operations
           cp -r prisma .next/standalone/
+          echo "Standalone bundle prepared"
 
-      # desativado temporariamente
-      # - name: Deploy to Azure Web App
-      #   uses: azure/webapps-deploy@v3
-      #   with:
-      #     app-name: "repurposeai-webapp"
-      #     slot-name: "production"
-      #     publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-      #     package: .next/standalone
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: "repurposeai-webapp"
+          package: .next/standalone
 
-      - name: Set startup command
+      - name: Set runtime app settings
         run: |
-          az webapp config set --name repurposeai-webapp --resource-group repurposeai-rg --startup-file "npx prisma migrate deploy && node server.js"
+          az webapp config appsettings set \
+            --name repurposeai-webapp \
+            --resource-group repurposeai-rg \
+            --settings \
+              DATABASE_URL='${{ secrets.DATABASE_URL }}' \
+              NEXTAUTH_SECRET='${{ secrets.NEXTAUTH_SECRET }}' \
+              NEXTAUTH_URL='${{ secrets.NEXTAUTH_URL }}' \
+              OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}' \
+              STRIPE_SECRET_KEY='${{ secrets.STRIPE_SECRET_KEY }}' \
+              STRIPE_WEBHOOK_SECRET='${{ secrets.STRIPE_WEBHOOK_SECRET }}' \
+              GOOGLE_CLIENT_ID='${{ secrets.GOOGLE_CLIENT_ID }}' \
+              GOOGLE_CLIENT_SECRET='${{ secrets.GOOGLE_CLIENT_SECRET }}' \
+              WEBSITE_NODE_DEFAULT_VERSION='~20'
+
+      - name: Set startup command (migrations + server)
+        run: |
+          az webapp config set \
+            --name repurposeai-webapp \
+            --resource-group repurposeai-rg \
+            --startup-file "npx prisma migrate deploy && node .next/standalone/server.js"

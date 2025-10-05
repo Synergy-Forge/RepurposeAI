@@ -1,24 +1,28 @@
-import { Queue } from "bullmq";
+import { Queue } from 'bullmq';
 
-import { getBullConnection } from "@/lib/redis/connection";
+import { EmailType } from '@/lib/email/types';
+import type { EmailOptions } from '@/lib/email/providers/zeptomail';
+import { getBullConnection } from '@/lib/redis/connection';
+
+export const EMAIL_QUEUE_NAME = 'email';
+const EMAIL_JOB_NAME = 'send-email';
 
 export type EmailJob = {
-  to: string;
-  subject: string;
-  template?: string;
-  data?: Record<string, unknown>;
+  userId: string;
+  type: EmailType;
+  options: EmailOptions;
 };
 
 let emailQueueInstance: Queue<EmailJob> | null = null;
 
 export const getEmailQueue = (): Queue<EmailJob> => {
   if (!emailQueueInstance) {
-    emailQueueInstance = new Queue<EmailJob>("email", {
+    emailQueueInstance = new Queue<EmailJob>(EMAIL_QUEUE_NAME, {
       connection: getBullConnection(),
       defaultJobOptions: {
         attempts: 3,
         backoff: {
-          type: "exponential",
+          type: 'exponential',
           delay: 5_000,
         },
         removeOnComplete: {
@@ -34,9 +38,13 @@ export const getEmailQueue = (): Queue<EmailJob> => {
   return emailQueueInstance;
 };
 
+export const enqueueEmail = async (job: EmailJob) => {
+  return getEmailQueue().add(EMAIL_JOB_NAME, job);
+};
+
 // For compatibility with existing code
 export const emailQueue = new Proxy({} as Queue<EmailJob>, {
-  get(target, prop) {
+  get(_, prop) {
     return getEmailQueue()[prop as keyof Queue<EmailJob>];
   },
 });
