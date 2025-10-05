@@ -23,7 +23,7 @@ export function toPublicUrl(relativePath: string) {
 
 export function resolveStoredPath(pathOrUrl: string) {
   if (!pathOrUrl) {
-    throw new Error('Path cannot be empty');
+    throw new Error('Path or URL cannot be empty or null');
   }
 
   if (isAbsolute(pathOrUrl)) {
