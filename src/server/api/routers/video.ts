@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc";
-import { processVideoToExtractKeyMoments } from "@/lib/video-processing";
 import { statfs, writeFile, unlink } from "fs/promises";
 import { randomUUID } from "crypto";
 import { fileTypeFromBuffer } from "file-type";
@@ -13,6 +12,11 @@ import {
   toPublicUrl,
   resolveStoredPath,
 } from "@/lib/storage";
+import {
+  enqueueVideoProcessing,
+  getVideoJobStatus,
+  getVideoQueueMetrics,
+} from "@/lib/queues/videoQueue";
 
 const MB = 1024 * 1024;
 const GB = MB * 1024;
@@ -261,9 +265,7 @@ export const videoRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
       }
 
-      let quotaReserved = false;
-      let processingSucceeded = false;
-
+      // Reserve quota atomically
       const reserveResult = Number(
         await ctx.prisma.$executeRaw`
           UPDATE "User"
@@ -291,80 +293,59 @@ export const videoRouter = createTRPCRouter({
         });
       }
 
-      quotaReserved = true;
-
       try {
-        console.info("[video:process] starting", {
+        console.info("[video:process] enqueuing job", {
           userId,
           videoId,
         });
 
-        // Update video status to processing
+        // Enfileirar vídeo para processamento assíncrono
+        const job = await enqueueVideoProcessing({
+          videoId,
+          userId,
+          originalUrl: video.originalUrl,
+          options: {
+            generateClips: true,
+            transcribe: false, // TODO: Implementar transcrição
+            generateHashtags: true,
+          },
+        });
+
+        // Atualizar status para queued
         await ctx.prisma.video.update({
           where: { id: videoId },
           data: { status: "processing" },
         });
 
-        // Process video to extract key moments
-        if (!video.originalUrl) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Video originalUrl is missing.",
-          });
-        }
-        const processedClips = await processVideoToExtractKeyMoments(
-          resolveStoredPath(video.originalUrl.replace(/^\//, ""))
-        );
-
-        // Save processed clips to database
-        const savedClips = await Promise.all(
-          processedClips.map((clip) =>
-            ctx.prisma.videoClip.create({
-              data: {
-                title: clip.title,
-                description: clip.description,
-                startTime: clip.startTime,
-                endTime: clip.endTime,
-                aspectRatio: clip.aspectRatio,
-                videoUrl: clip.videoUrl,
-                captions: clip.captions,
-                hashtags: clip.hashtags,
-                videoId,
-              },
-            })
-          )
-        );
-
-        // Update video status to completed
-        await ctx.prisma.video.update({
-          where: { id: videoId },
-          data: { status: "completed" },
-        });
-
-        processingSucceeded = true;
-
-        console.info("[video:process] completed", {
+        console.info("[video:process] job enqueued", {
           userId,
           videoId,
-          clipCount: savedClips.length,
+          jobId: job.id,
         });
 
         return {
           success: true,
-          clips: savedClips,
-          message: "Video processed successfully",
+          jobId: job.id,
+          videoId,
+          message:
+            "Video queued for processing. You will be notified when it's ready.",
         };
       } catch (error) {
+        // Rollback quota if enqueue fails
         try {
-          await ctx.prisma.video.update({
-            where: { id: videoId },
-            data: { status: "failed" },
+          await ctx.prisma.user.update({
+            where: { id: userId },
+            data: {
+              videosProcessed: {
+                decrement: 1,
+              },
+            },
           });
-        } catch (statusError) {
-          console.error("Error updating video status to failed:", statusError);
+        } catch (quotaError) {
+          console.error("Error rolling back video quota:", quotaError);
         }
 
-        console.error("[video:process] failed", {
+        console.error("[video:process] failed to enqueue", {
           userId,
           videoId,
           error,
@@ -376,24 +357,9 @@ export const videoRouter = createTRPCRouter({
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to process video",
+          message: "Failed to queue video for processing",
           cause: error,
         });
-      } finally {
-        if (quotaReserved && !processingSucceeded) {
-          try {
-            await ctx.prisma.user.update({
-              where: { id: userId },
-              data: {
-                videosProcessed: {
-                  decrement: 1,
-                },
-              },
-            });
-          } catch (quotaError) {
-            console.error("Error rolling back video quota:", quotaError);
-          }
-        }
       }
     }),
 
@@ -482,4 +448,48 @@ export const videoRouter = createTRPCRouter({
         throw new Error("Failed to delete video");
       }
     }),
+
+  getVideoProcessingStatus: protectedProcedure
+    .input(z.object({ videoId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const { videoId } = input;
+      const userId = ctx.session.user.id;
+
+      // Verificar se o vídeo pertence ao usuário
+      const video = await ctx.prisma.video.findFirst({
+        where: {
+          id: videoId,
+          userId,
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      if (!video) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
+      }
+
+      // Obter status do job na fila
+      const jobStatus = await getVideoJobStatus(videoId);
+
+      return {
+        videoId,
+        videoStatus: video.status,
+        jobStatus: jobStatus
+          ? {
+              state: jobStatus.state,
+              progress: jobStatus.progress,
+              attemptsMade: jobStatus.attemptsMade,
+              failedReason: jobStatus.failedReason,
+            }
+          : null,
+      };
+    }),
+
+  getQueueMetrics: protectedProcedure.query(async () => {
+    const metrics = await getVideoQueueMetrics();
+    return metrics;
+  }),
 });
