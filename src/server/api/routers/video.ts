@@ -479,7 +479,10 @@ export const videoRouter = createTRPCRouter({
         });
 
         if (!video) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Video not found",
+          });
         }
 
         // Obter status do job na fila (pode ser null)
@@ -517,10 +520,11 @@ export const videoRouter = createTRPCRouter({
           status === "completed"
             ? 100
             : typeof jobStatus?.progress === "number"
-            ? Math.max(0, Math.min(100, Number(jobStatus.progress)))
-            : null;
+              ? Math.max(0, Math.min(100, Number(jobStatus.progress)))
+              : null;
 
-        const error = status === "failed" ? jobStatus?.failedReason ?? null : null;
+        const error =
+          status === "failed" ? (jobStatus?.failedReason ?? null) : null;
 
         return {
           status,

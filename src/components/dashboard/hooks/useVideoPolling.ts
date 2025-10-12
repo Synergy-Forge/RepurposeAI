@@ -21,26 +21,35 @@ interface UseVideoPollingOptions {
   enabled?: boolean;
 }
 
-export function useVideoPolling(videoIds: string[], options?: UseVideoPollingOptions) {
-  const ids = useMemo(() => Array.from(new Set(videoIds)).filter(Boolean), [videoIds]);
+export function useVideoPolling(
+  videoIds: string[],
+  options?: UseVideoPollingOptions
+) {
+  const ids = useMemo(
+    () => Array.from(new Set(videoIds)).filter(Boolean),
+    [videoIds]
+  );
 
   const queries = trpc.useQueries((t) =>
     ids.map((videoId) =>
-      t.video.getVideoProcessingStatus({ videoId }, {
-        // polling interval adaptativo por vídeo
-        refetchInterval: (query) => {
-          if (!options?.enabled) return false;
-          const status = (query.state.data as { status?: string } | undefined)?.status;
-          if (status === "completed" || status === "failed") return false;
-          if (status === "processing") return 1000; // 1s
-          if (status === "queued") return 3000; // 3s (pode variar até 5s)
-          return 5000;
-        },
-        enabled: Boolean(options?.enabled) && Boolean(videoId),
-      })
+      t.video.getVideoProcessingStatus(
+        { videoId },
+        {
+          // polling interval adaptativo por vídeo
+          refetchInterval: (query) => {
+            if (!options?.enabled) return false;
+            const status = (query.state.data as { status?: string } | undefined)
+              ?.status;
+            if (status === "completed" || status === "failed") return false;
+            if (status === "processing") return 1000; // 1s
+            if (status === "queued") return 3000; // 3s (pode variar até 5s)
+            return 5000;
+          },
+          enabled: Boolean(options?.enabled) && Boolean(videoId),
+        }
+      )
     )
   );
-
 
   const dataById: VideoPollingResult = useMemo(() => {
     const map: VideoPollingResult = {};

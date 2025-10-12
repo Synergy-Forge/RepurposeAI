@@ -34,7 +34,10 @@ async function fileToBase64(file: File): Promise<string> {
   const bytes = new Uint8Array(buffer);
   const chunk = 0x8000;
   for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk) as unknown as number[]);
+    binary += String.fromCharCode.apply(
+      null,
+      bytes.subarray(i, i + chunk) as unknown as number[]
+    );
   }
   return btoa(binary);
 }
@@ -57,64 +60,86 @@ export function UploadPage({ onUpload }: UploadPageProps) {
     },
   });
 
-  const processingIds = useMemo(() =>
-    uploadQueue.map((u) => u.videoId).filter(Boolean) as string[],
-  [uploadQueue]);
+  const processingIds = useMemo(
+    () => uploadQueue.map((u) => u.videoId).filter(Boolean) as string[],
+    [uploadQueue]
+  );
 
-  const polling = useVideoPolling(processingIds, { enabled: processingIds.length > 0 });
+  const polling = useVideoPolling(processingIds, {
+    enabled: processingIds.length > 0,
+  });
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!acceptedFiles?.length) return;
-    onUpload?.(acceptedFiles);
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (!acceptedFiles?.length) return;
+      onUpload?.(acceptedFiles);
 
-    // Enqueue itens visualmente
-    const newItems: UploadItem[] = acceptedFiles.map((file) => ({ file, progress: 0, status: "uploading" }));
-    setUploadQueue((prev) => [...prev, ...newItems]);
+      // Enqueue itens visualmente
+      const newItems: UploadItem[] = acceptedFiles.map((file) => ({
+        file,
+        progress: 0,
+        status: "uploading",
+      }));
+      setUploadQueue((prev) => [...prev, ...newItems]);
 
-    for (const item of newItems) {
-      try {
-        // Limites de tipo/tamanho no client (rápidos); servidor revalida MIME e plano
-        if (!item.file.type.startsWith("video/")) {
-          throw new Error("Unsupported file type");
+      for (const item of newItems) {
+        try {
+          // Limites de tipo/tamanho no client (rápidos); servidor revalida MIME e plano
+          if (!item.file.type.startsWith("video/")) {
+            throw new Error("Unsupported file type");
+          }
+
+          if (item.file.size > MAX_SIZE_BYTES) {
+            throw new Error("File exceeds maximum size");
+          }
+
+          const title = item.file.name.replace(/\.[^.]+$/, "");
+          const base64 = await fileToBase64(item.file);
+
+          const toastId = toast.loading("Uploading video...");
+          const uploadRes = await uploadVideo.mutateAsync({
+            title,
+            description: undefined,
+            videoData: base64,
+          });
+          toast.success("Upload completed", { id: toastId });
+
+          // Atualiza queue com videoId e status
+          setUploadQueue((prev) =>
+            prev.map((u) =>
+              u.file === item.file
+                ? {
+                    ...u,
+                    status: "processing",
+                    progress: 10,
+                    videoId: uploadRes.videoId,
+                    title,
+                  }
+                : u
+            )
+          );
+
+          // Inicia processamento
+          const procToast = toast.loading("Queuing for processing...");
+          await processVideo.mutateAsync({ videoId: uploadRes.videoId });
+          toast.success("Processing started", { id: procToast });
+
+          processingIdsRef.current.add(uploadRes.videoId);
+          // Invalidate lista do usuário
+          utils.video.getUserVideos.invalidate();
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Upload failed";
+          toast.error(message);
+          setUploadQueue((prev) =>
+            prev.map((u) =>
+              u.file === item.file ? { ...u, status: "error" } : u
+            )
+          );
         }
-
-        if (item.file.size > MAX_SIZE_BYTES) {
-          throw new Error("File exceeds maximum size");
-        }
-
-        const title = item.file.name.replace(/\.[^.]+$/, "");
-        const base64 = await fileToBase64(item.file);
-
-        const toastId = toast.loading("Uploading video...");
-        const uploadRes = await uploadVideo.mutateAsync({
-          title,
-          description: undefined,
-          videoData: base64,
-        });
-        toast.success("Upload completed", { id: toastId });
-
-        // Atualiza queue com videoId e status
-        setUploadQueue((prev) => prev.map((u) =>
-          u.file === item.file ? { ...u, status: "processing", progress: 10, videoId: uploadRes.videoId, title } : u
-        ));
-
-        // Inicia processamento
-        const procToast = toast.loading("Queuing for processing...");
-        await processVideo.mutateAsync({ videoId: uploadRes.videoId });
-        toast.success("Processing started", { id: procToast });
-
-        processingIdsRef.current.add(uploadRes.videoId);
-        // Invalidate lista do usuário
-        utils.video.getUserVideos.invalidate();
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Upload failed";
-        toast.error(message);
-        setUploadQueue((prev) => prev.map((u) =>
-          u.file === item.file ? { ...u, status: "error" } : u
-        ));
       }
-    }
-  }, [onUpload, uploadVideo, processVideo, utils.video.getUserVideos]);
+    },
+    [onUpload, uploadVideo, processVideo, utils.video.getUserVideos]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -177,10 +202,14 @@ export function UploadPage({ onUpload }: UploadPageProps) {
               <p className="text-gray-600 dark:text-gray-400 mb-4">
                 Drag and drop your video files here, or click to browse
               </p>
-              <p className="text-sm text-gray-500">Supports MP4, MOV, AVI, MKV, WEBM • Max file size: 5GB</p>
+              <p className="text-sm text-gray-500">
+                Supports MP4, MOV, AVI, MKV, WEBM • Max file size: 5GB
+              </p>
             </div>
 
-            <button className="dashboard-btn btn-primary px-8 py-3 rounded-lg font-semibold">Select Files</button>
+            <button className="dashboard-btn btn-primary px-8 py-3 rounded-lg font-semibold">
+              Select Files
+            </button>
           </div>
         </div>
       </section>
@@ -192,7 +221,10 @@ export function UploadPage({ onUpload }: UploadPageProps) {
 
           <div className="space-y-4">
             {renderedQueue.map((upload, index) => (
-              <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <div
+                key={index}
+                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+              >
                 <div className="flex items-center space-x-4">
                   {/* File Icon */}
                   <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -202,10 +234,17 @@ export function UploadPage({ onUpload }: UploadPageProps) {
                   {/* File Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium truncate pr-4">{upload.title ?? upload.file.name}</h4>
+                      <h4 className="font-medium truncate pr-4">
+                        {upload.title ?? upload.file.name}
+                      </h4>
                       <div className="flex items-center space-x-2">
-                        {upload.status === "completed" && <Check className="w-5 h-5 text-green-500" />}
-                        <button onClick={() => removeFromQueue(upload.file)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                        {upload.status === "completed" && (
+                          <Check className="w-5 h-5 text-green-500" />
+                        )}
+                        <button
+                          onClick={() => removeFromQueue(upload.file)}
+                          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                        >
                           <X className="w-4 h-4 text-gray-400" />
                         </button>
                       </div>
@@ -215,7 +254,9 @@ export function UploadPage({ onUpload }: UploadPageProps) {
                       <span>{formatFileSize(upload.file.size)}</span>
                       <span>Video</span>
                       {upload.status === "completed" && (
-                        <span className="text-green-600 dark:text-green-400 font-medium">Upload Complete</span>
+                        <span className="text-green-600 dark:text-green-400 font-medium">
+                          Upload Complete
+                        </span>
                       )}
                     </div>
 
@@ -223,7 +264,13 @@ export function UploadPage({ onUpload }: UploadPageProps) {
                     {upload.status !== "completed" && (
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span>{upload.status === "uploading" ? "Uploading..." : upload.status === "processing" ? "Processing..." : ""}</span>
+                          <span>
+                            {upload.status === "uploading"
+                              ? "Uploading..."
+                              : upload.status === "processing"
+                                ? "Processing..."
+                                : ""}
+                          </span>
                           <span>{upload.progress}%</span>
                         </div>
                         <Progress value={upload.progress} className="h-2" />
@@ -233,7 +280,9 @@ export function UploadPage({ onUpload }: UploadPageProps) {
                     {/* Action Buttons */}
                     {upload.status === "completed" && (
                       <div className="flex space-x-3 mt-3">
-                        <button className="dashboard-btn btn-primary px-4 py-2 rounded text-sm">Process Video</button>
+                        <button className="dashboard-btn btn-primary px-4 py-2 rounded text-sm">
+                          Process Video
+                        </button>
                         <button className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                           <Play className="w-4 h-4 inline mr-1" />
                           Preview
@@ -254,7 +303,9 @@ export function UploadPage({ onUpload }: UploadPageProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <h4 className="font-medium text-indigo-600 dark:text-indigo-400">📹 Video Quality</h4>
+            <h4 className="font-medium text-indigo-600 dark:text-indigo-400">
+              📹 Video Quality
+            </h4>
             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
               <li>• Upload in the highest quality available</li>
               <li>• Minimum resolution: 720p recommended</li>
@@ -263,7 +314,9 @@ export function UploadPage({ onUpload }: UploadPageProps) {
           </div>
 
           <div className="space-y-3">
-            <h4 className="font-medium text-indigo-600 dark:text-indigo-400">⚡ Processing</h4>
+            <h4 className="font-medium text-indigo-600 dark:text-indigo-400">
+              ⚡ Processing
+            </h4>
             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
               <li>• Processing time depends on video length</li>
               <li>• You&apos;ll be notified when complete</li>
