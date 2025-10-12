@@ -28,8 +28,8 @@ async function fileToBase64(file: File): Promise<string> {
   if (buffer.byteLength > MAX_SIZE_BYTES) {
     throw new Error("File too large");
   }
-  // Browser: btoa em binário pode quebrar; usar from + toString base64 via polyfill Buffer
-  // Next 15 com React 19 usa webpack polyfill de Buffer no client only se habilitado; aqui usaremos b64 manual
+  // Browser: btoa on binary data may fail; use from + toString base64 via Buffer polyfill
+  // Next 15 with React 19 uses webpack Buffer polyfill in client only if enabled; here we'll use manual b64
   let binary = "";
   const bytes = new Uint8Array(buffer);
   const chunk = 0x8000;
