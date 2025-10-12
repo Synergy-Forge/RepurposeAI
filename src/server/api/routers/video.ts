@@ -485,7 +485,7 @@ export const videoRouter = createTRPCRouter({
           });
         }
 
-        // Obter status do job na fila (pode ser null)
+        // Get job status from queue (can be null)
         const jobStatus = await getVideoJobStatus(videoId);
 
         // Mapear estados do BullMQ para nosso contrato
