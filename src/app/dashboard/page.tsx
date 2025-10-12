@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { trpc } from '@/lib/trpc-client';
-import { useAppStore } from '@/lib/store';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { trpc } from "@/lib/trpc-client";
+import { toast } from "sonner";
 
-import { signIn, signOut } from 'next-auth/react';
+import { signIn, signOut } from "next-auth/react";
+import { useVideoPolling } from "@/components/dashboard/hooks/useVideoPolling";
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -25,13 +25,20 @@ export default function HomePage() {
   const [description, setDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   
-  const { processingVideos, addProcessingVideo, updateVideoStatus } = useAppStore();
-
+  const utils = trpc.useUtils();
   const uploadVideoMutation = trpc.video.uploadVideo.useMutation();
   const processVideoMutation = trpc.video.processVideo.useMutation();
+  const deleteVideoMutation = trpc.video.deleteVideo.useMutation();
+
   const getUserVideosQuery = trpc.video.getUserVideos.useQuery(undefined, {
     enabled: !!session?.user,
   });
+
+  // Prepare polling for in-progress videos
+  const inProgressIds = (getUserVideosQuery.data ?? [])
+    .filter((v) => v.status !== "completed" && v.status !== "failed")
+    .map((v) => v.id);
+  const polling = useVideoPolling(inProgressIds, { enabled: inProgressIds.length > 0 });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -62,22 +69,10 @@ export default function HomePage() {
         videoData: base64,
       });
 
-      // Add to processing videos
-      addProcessingVideo({
-        id: uploadResult.videoId,
-        title,
-        status: 'uploading',
-        progress: 0,
-      });
-
       // Process video
-      updateVideoStatus(uploadResult.videoId, 'processing', 50);
-      
       await processVideoMutation.mutateAsync({
         videoId: uploadResult.videoId,
       });
-
-      updateVideoStatus(uploadResult.videoId, 'completed', 100);
       
       toast.success('Video processed successfully!');
       
@@ -87,7 +82,7 @@ export default function HomePage() {
       setDescription('');
       
       // Refresh videos list
-      getUserVideosQuery.refetch();
+      utils.video.getUserVideos.invalidate();
       
     } catch (error) {
       console.error('Upload error:', error);
@@ -229,31 +224,32 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* Processing Status */}
+          {/* Processing Status - polling baseado em vídeos não concluídos */}
           <Card>
             <CardHeader>
               <CardTitle>Processing Status</CardTitle>
-              <CardDescription>
-                Track the progress of your video processing
-              </CardDescription>
+              <CardDescription>Track the progress of your video processing</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {processingVideos.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  No videos being processed
-                </p>
+              {inProgressIds.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No videos being processed</p>
               ) : (
-                processingVideos.map((video) => (
-                  <div key={video.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{video.title}</span>
-                      <Badge variant={video.status === 'completed' ? 'default' : 'secondary'}>
-                        {video.status}
-                      </Badge>
-                    </div>
-                    <Progress value={video.progress} className="w-full" />
-                  </div>
-                ))
+                (getUserVideosQuery.data ?? [])
+                  .filter((v) => inProgressIds.includes(v.id))
+                  .map((v) => {
+                    const s = polling.data[v.id];
+                    const status = s?.status ?? (v.status as "queued" | "processing" | "completed" | "failed");
+                    const progress = s?.progress ?? (status === "processing" ? 10 : 0);
+                    return (
+                      <div key={v.id} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{v.title}</span>
+                          <Badge variant={status === "completed" ? "default" : "secondary"}>{status}</Badge>
+                        </div>
+                        <Progress value={progress} className="w-full" />
+                      </div>
+                    );
+                  })
               )}
             </CardContent>
           </Card>
@@ -270,8 +266,7 @@ export default function HomePage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                 {getUserVideosQuery.data.map((video: any) => (
+                                 {getUserVideosQuery.data.map((video) => (
                    <Card key={video.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
                      <CardContent className="p-4">
                        <div className="space-y-2">
@@ -290,6 +285,25 @@ export default function HomePage() {
                              <Link href={`/video/${video.id}`}>View Clips</Link>
                            </Button>
                          )}
+                          <div className="flex gap-2">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={async () => {
+                                if (!confirm("Delete this video?")) return;
+                                const tId = toast.loading("Deleting video...");
+                                try {
+                                  await deleteVideoMutation.mutateAsync({ videoId: video.id });
+                                  toast.success("Video deleted", { id: tId });
+                                  utils.video.getUserVideos.invalidate();
+                                } catch (e) {
+                                  toast.error(e instanceof Error ? e.message : "Delete failed", { id: tId });
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                        </div>
                      </CardContent>
                    </Card>

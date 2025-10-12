@@ -451,41 +451,95 @@ export const videoRouter = createTRPCRouter({
 
   getVideoProcessingStatus: protectedProcedure
     .input(z.object({ videoId: z.string() }))
+    .output(
+      z.object({
+        status: z.enum(["queued", "processing", "completed", "failed"]),
+        progress: z.number().nullable(),
+        error: z.string().nullable(),
+        jobId: z.string().nullish(),
+        updatedAt: z.string().optional(),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const { videoId } = input;
       const userId = ctx.session.user.id;
 
-      // Verificar se o vídeo pertence ao usuário
-      const video = await ctx.prisma.video.findFirst({
-        where: {
-          id: videoId,
-          userId,
-        },
-        select: {
-          id: true,
-          status: true,
-        },
-      });
+      try {
+        // Verificar se o vídeo pertence ao usuário
+        const video = await ctx.prisma.video.findFirst({
+          where: {
+            id: videoId,
+            userId,
+          },
+          select: {
+            id: true,
+            status: true,
+            updatedAt: true,
+          },
+        });
 
-      if (!video) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
+        if (!video) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
+        }
+
+        // Obter status do job na fila (pode ser null)
+        const jobStatus = await getVideoJobStatus(videoId);
+
+        // Mapear estados do BullMQ para nosso contrato
+        const mapState = (vStatus: string, jState?: string | null) => {
+          // Estados finais priorizam o status do vídeo em DB
+          if (vStatus === "completed") return "completed" as const;
+          if (vStatus === "failed") return "failed" as const;
+
+          if (!jState) {
+            // Sem job conhecido: se vídeo está processing, reportar processing; se uploading, considerar queued
+            if (vStatus === "processing") return "processing" as const;
+            return "queued" as const;
+          }
+
+          switch (jState) {
+            case "active":
+              return "processing" as const;
+            case "waiting":
+            case "delayed":
+            case "paused":
+            case "waiting-children":
+              return "queued" as const;
+            case "completed":
+              return "completed" as const;
+            case "failed":
+              return "failed" as const;
+            default:
+              return vStatus === "processing" ? ("processing" as const) : ("queued" as const);
+          }
+        };
+
+        const status = mapState(video.status, jobStatus?.state ?? null);
+
+        const progress =
+          status === "completed"
+            ? 100
+            : typeof jobStatus?.progress === "number"
+            ? Math.max(0, Math.min(100, Number(jobStatus.progress)))
+            : null;
+
+        const error = status === "failed" ? jobStatus?.failedReason ?? null : null;
+
+        return {
+          status,
+          progress,
+          error,
+          jobId: jobStatus?.jobId ?? null,
+          updatedAt: video.updatedAt.toISOString(),
+        };
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to get video processing status",
+          cause: err,
+        });
       }
-
-      // Obter status do job na fila
-      const jobStatus = await getVideoJobStatus(videoId);
-
-      return {
-        videoId,
-        videoStatus: video.status,
-        jobStatus: jobStatus
-          ? {
-              state: jobStatus.state,
-              progress: jobStatus.progress,
-              attemptsMade: jobStatus.attemptsMade,
-              failedReason: jobStatus.failedReason,
-            }
-          : null,
-      };
     }),
 
   getQueueMetrics: protectedProcedure.query(async () => {
