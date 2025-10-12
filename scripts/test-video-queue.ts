@@ -9,7 +9,8 @@ import { prisma } from "../src/lib/prisma";
 async function testVideoQueue() {
   console.log("🧪 Testing Video Queue System\n");
 
-  let testVideo: { id: string; userId: string; originalUrl: string } | null = null;
+  let testVideo: { id: string; userId: string; originalUrl: string } | null =
+    null;
   let testUser: { id: string; email: string | null } | null = null;
 
   try {
@@ -106,7 +107,7 @@ async function testVideoQueue() {
     console.log("   Start it with: npm run dev:video-worker\n");
   } catch (error) {
     console.error("❌ Test failed:", error);
-    
+
     // Cleanup on error
     if (testVideo) {
       try {
@@ -116,7 +117,7 @@ async function testVideoQueue() {
         // Ignore cleanup errors
       }
     }
-    
+
     throw error;
   } finally {
     await prisma.$disconnect();

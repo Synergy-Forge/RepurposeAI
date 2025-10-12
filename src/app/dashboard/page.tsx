@@ -237,7 +237,7 @@ export default function HomePage() {
                 (getUserVideosQuery.data ?? [])
                   .filter((v) => inProgressIds.includes(v.id))
                   .map((v) => {
-                    const s = polling.data[v.id];
+                    const s = polling.dataById[v.id];
                     const status = s?.status ?? (v.status as "queued" | "processing" | "completed" | "failed");
                     const progress = s?.progress ?? (status === "processing" ? 10 : 0);
                     return (

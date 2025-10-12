@@ -491,11 +491,8 @@ export const videoRouter = createTRPCRouter({
           if (vStatus === "completed") return "completed" as const;
           if (vStatus === "failed") return "failed" as const;
 
-          if (!jState) {
-            // Sem job conhecido: se vídeo está processing, reportar processing; se uploading, considerar queued
-            if (vStatus === "processing") return "processing" as const;
-            return "queued" as const;
-          }
+          // Sem job conhecido: considerar queued por padrão
+          if (!jState) return "queued" as const;
 
           switch (jState) {
             case "active":
@@ -510,7 +507,7 @@ export const videoRouter = createTRPCRouter({
             case "failed":
               return "failed" as const;
             default:
-              return vStatus === "processing" ? ("processing" as const) : ("queued" as const);
+              return "queued" as const;
           }
         };
 

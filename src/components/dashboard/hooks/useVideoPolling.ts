@@ -42,7 +42,7 @@ export function useVideoPolling(videoIds: string[], options?: UseVideoPollingOpt
   );
 
 
-  const data: VideoPollingResult = useMemo(() => {
+  const dataById: VideoPollingResult = useMemo(() => {
     const map: VideoPollingResult = {};
     queries.forEach((q, idx) => {
       const id = ids[idx];
@@ -52,7 +52,7 @@ export function useVideoPolling(videoIds: string[], options?: UseVideoPollingOpt
   }, [queries, ids]);
 
   return {
-    data,
+    dataById,
     isLoading: queries.some((q) => q.isLoading),
     isError: queries.some((q) => q.isError),
     refetchAll: () => queries.forEach((q) => q.refetch()),

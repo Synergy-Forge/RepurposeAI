@@ -135,7 +135,7 @@ export function UploadPage({ onUpload }: UploadPageProps) {
   };
 
   // Atualizar progresso visual a partir do polling
-  const polledMap = polling.data;
+  const polledMap = polling.dataById;
   const renderedQueue = useMemo(() => {
     return uploadQueue.map((u) => {
       if (!u.videoId) return u;
