@@ -36,7 +36,7 @@ async function fileToBase64(file: File): Promise<string> {
   for (let i = 0; i < bytes.length; i += chunk) {
     binary += String.fromCharCode.apply(
       null,
-      bytes.subarray(i, i + chunk) as unknown as number[]
+      Array.from(bytes.subarray(i, i + chunk))
     );
   }
   return btoa(binary);
