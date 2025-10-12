@@ -488,9 +488,9 @@ export const videoRouter = createTRPCRouter({
         // Get job status from queue (can be null)
         const jobStatus = await getVideoJobStatus(videoId);
 
-        // Mapear estados do BullMQ para nosso contrato
+        // Map BullMQ states to our contract
         const mapState = (vStatus: string, jState?: string | null) => {
-          // Estados finais priorizam o status do vídeo em DB
+          // Final states prioritize video status in DB
           if (vStatus === "completed") return "completed" as const;
           if (vStatus === "failed") return "failed" as const;
 
