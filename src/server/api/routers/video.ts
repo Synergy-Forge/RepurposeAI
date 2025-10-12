@@ -465,7 +465,7 @@ export const videoRouter = createTRPCRouter({
       const userId = ctx.session.user.id;
 
       try {
-        // Verificar se o vídeo pertence ao usuário
+        // Check if the video belongs to the user
         const video = await ctx.prisma.video.findFirst({
           where: {
             id: videoId,
