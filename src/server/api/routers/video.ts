@@ -494,7 +494,7 @@ export const videoRouter = createTRPCRouter({
           if (vStatus === "completed") return "completed" as const;
           if (vStatus === "failed") return "failed" as const;
 
-          // Sem job conhecido: considerar queued por padrão
+          // No known job: consider queued by default
           if (!jState) return "queued" as const;
 
           switch (jState) {
