@@ -93,7 +93,9 @@ export async function POST(req: Request) {
     // Cancel the remaining of detect branch
     try {
       await reader.cancel();
-    } catch {}
+    } catch (err) {
+      console.error("Error cancelling detectStream reader:", err);
+    }
 
     const probe = chunks.length
       ? Buffer.concat(chunks.map((u) => Buffer.from(u)))
