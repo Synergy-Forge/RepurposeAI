@@ -140,7 +140,9 @@ export async function POST(req: Request) {
         if (readTotal > MAX_FILE_SIZE) {
           try {
             await reader2.cancel();
-          } catch {}
+          } catch (cancelErr) {
+            console.error("[upload:video] error cancelling reader2", cancelErr);
+          }
           writeStream.destroy();
           return NextResponse.json(
             { error: "File exceeds plan size limit" },
