@@ -22,38 +22,12 @@ interface UploadPageProps {
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024 * 1024; // 5GB teto local; backend aplica limites por plano
 
-async function fileToBase64(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  // Evitar sobrecarga de memória em arquivos gigantes
-  if (buffer.byteLength > MAX_SIZE_BYTES) {
-    throw new Error("File too large");
-  }
-  // Browser: btoa on binary data may fail; use from + toString base64 via Buffer polyfill
-  // Next 15 with React 19 uses webpack Buffer polyfill in client only if enabled; here we'll use manual b64
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode.apply(
-      null,
-      Array.from(bytes.subarray(i, i + chunk))
-    );
-  }
-  return btoa(binary);
-}
-
 export function UploadPage({ onUpload }: UploadPageProps) {
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [dragActive, _setDragActive] = useState(false);
   const processingIdsRef = useRef<Set<string>>(new Set());
 
   const utils = trpc.useUtils();
-
-  const uploadVideo = trpc.video.uploadVideo.useMutation({
-    onError: (err) => {
-      toast.error(err.message || "Upload failed");
-    },
-  });
   const processVideo = trpc.video.processVideo.useMutation({
     onError: (err) => {
       toast.error(err.message || "Processing failed");
@@ -94,37 +68,37 @@ export function UploadPage({ onUpload }: UploadPageProps) {
           }
 
           const title = item.file.name.replace(/\.[^.]+$/, "");
-          const base64 = await fileToBase64(item.file);
 
           const toastId = toast.loading("Uploading video...");
-          const uploadRes = await uploadVideo.mutateAsync({
-            title,
-            description: undefined,
-            videoData: base64,
+          const form = new FormData();
+          form.append("file", item.file);
+          form.append("title", title);
+          const res = await fetch("/api/upload/video", {
+            method: "POST",
+            body: form,
           });
+          if (!res.ok) {
+            const j = await res.json().catch(() => ({}));
+            throw new Error(j?.error || `Upload failed (${res.status})`);
+          }
+          const { videoId } = (await res.json()) as { videoId: string };
           toast.success("Upload completed", { id: toastId });
 
           // Atualiza queue com videoId e status
           setUploadQueue((prev) =>
             prev.map((u) =>
               u.file === item.file
-                ? {
-                    ...u,
-                    status: "processing",
-                    progress: 10,
-                    videoId: uploadRes.videoId,
-                    title,
-                  }
+                ? { ...u, status: "processing", progress: 10, videoId, title }
                 : u
             )
           );
 
           // Inicia processamento
           const procToast = toast.loading("Queuing for processing...");
-          await processVideo.mutateAsync({ videoId: uploadRes.videoId });
+          await processVideo.mutateAsync({ videoId });
           toast.success("Processing started", { id: procToast });
 
-          processingIdsRef.current.add(uploadRes.videoId);
+          processingIdsRef.current.add(videoId);
           // Invalidate lista do usuário
           utils.video.getUserVideos.invalidate();
         } catch (err) {
@@ -138,7 +112,7 @@ export function UploadPage({ onUpload }: UploadPageProps) {
         }
       }
     },
-    [onUpload, uploadVideo, processVideo, utils.video.getUserVideos]
+    [onUpload, processVideo, utils.video.getUserVideos]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
