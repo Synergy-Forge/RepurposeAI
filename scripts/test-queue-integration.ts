@@ -8,7 +8,12 @@ async function testQueueIntegration() {
   console.log("   Start it with: npm run dev:video-worker\n");
 
   let testUser: { id: string; email: string | null } | null = null;
-  let testVideo: { id: string; userId: string; originalUrl: string; status: string } | null = null;
+  let testVideo: {
+    id: string;
+    userId: string;
+    originalUrl: string;
+    status: string;
+  } | null = null;
 
   try {
     // 1. Setup test user
