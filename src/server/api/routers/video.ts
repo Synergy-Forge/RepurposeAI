@@ -49,6 +49,43 @@ const processVideoSchema = z.object({
   videoId: z.string(),
 });
 
+const clipOutputSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  aspectRatio: z.string(),
+  startTime: z.number(),
+  endTime: z.number(),
+  videoUrl: z.string(),
+  captions: z.string().nullable(),
+  hashtags: z.string().nullable(),
+});
+
+const videoSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  status: z.enum(["uploading", "processing", "completed", "failed"]),
+  originalUrl: z.string(),
+  createdAt: z.date(),
+});
+
+const getVideoWithClipsOutputSchema = z.object({
+  video: videoSummarySchema,
+  clips: z.array(clipOutputSchema),
+  updatedAt: z.date(),
+  duration: z.number().nonnegative(),
+});
+
+type VideoStatus = z.infer<typeof videoSummarySchema>["status"];
+
+const allowedVideoStatuses: VideoStatus[] = [
+  "uploading",
+  "processing",
+  "completed",
+  "failed",
+];
+
 async function safeUnlink(filePath: string) {
   try {
     await unlink(filePath);
@@ -379,6 +416,7 @@ export const videoRouter = createTRPCRouter({
 
   getVideoWithClips: protectedProcedure
     .input(z.object({ videoId: z.string() }))
+    .output(getVideoWithClipsOutputSchema)
     .query(async ({ ctx, input }) => {
       const { videoId } = input;
       const userId = ctx.session.user.id;
@@ -394,10 +432,42 @@ export const videoRouter = createTRPCRouter({
       });
 
       if (!video) {
-        throw new Error("Video not found");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
       }
 
-      return video;
+      const clips = video.videoClips
+        .map((clip) => ({
+          id: clip.id,
+          title: clip.title,
+          description: clip.description ?? null,
+          aspectRatio: clip.aspectRatio,
+          startTime: clip.startTime,
+          endTime: clip.endTime,
+          videoUrl: clip.videoUrl,
+          captions: clip.captions ?? null,
+          hashtags: clip.hashtags ?? null,
+        }))
+        .sort((a, b) => a.startTime - b.startTime);
+
+      const status = allowedVideoStatuses.includes(
+        video.status as VideoStatus,
+      )
+        ? (video.status as VideoStatus)
+        : "processing";
+
+      return {
+        video: {
+          id: video.id,
+          title: video.title,
+          description: video.description ?? null,
+          status,
+          originalUrl: video.originalUrl,
+          createdAt: video.createdAt,
+        },
+        clips,
+        updatedAt: video.updatedAt,
+        duration: Math.max(0, video.duration ?? 0),
+      };
     }),
 
   deleteVideo: protectedProcedure
