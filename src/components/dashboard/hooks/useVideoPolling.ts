@@ -35,7 +35,7 @@ export function useVideoPolling(
       t.video.getVideoProcessingStatus(
         { videoId },
         {
-          // polling interval adaptativo por vídeo
+          // adaptive polling interval per video
           refetchInterval: (query) => {
             if (!options?.enabled) return false;
             const status = (query.state.data as { status?: string } | undefined)
