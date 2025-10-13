@@ -251,7 +251,7 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* Processing Status - polling baseado em vídeos não concluídos */}
+          {/* Processing Status - polling based on incomplete videos */}
           <Card>
             <CardHeader>
               <CardTitle>Processing Status</CardTitle>
