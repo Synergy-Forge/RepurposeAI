@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     const webStream = file.stream();
     // Split stream into two branches: one for detection (small prefix) and one for saving
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [detectStream, saveStream] = (webStream as any).tee();
+    const [detectStream, saveStream] = (webStream as ReadableStream<Uint8Array>).tee();
 
     // Read up to 64KB for detection
     const reader = detectStream.getReader();
