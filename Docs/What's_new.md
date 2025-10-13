@@ -928,3 +928,16 @@ This testing infrastructure ensures the cost optimization measures will function
 ### CI Lint Error Fix: Resolved Build Output Linting Issue After Last Deploy
 
 Resolved a CI/CD pipeline issue where ESLint was incorrectly linting the build output (`dist/`), causing errors related to `require()` usage in compiled files. Added a `.eslintignore` file to exclude both `dist/` and `node_modules/` from linting, ensuring that only source files are checked. This fix restores clean CI runs and prevents false-positive lint errors on deploy.
+
+# Felipe Abe - (13/10/2025)
+
+### Dashboard Upload/Process Integration & Multipart Upload Migration
+
+- **Dashboard Upload Integration**: Completed integration of the video upload and processing flow in the dashboard, connecting frontend, tRPC, Prisma, and BullMQ workers. Users can now upload videos, track real-time progress, and delete videos directly from the dashboard.
+- **Multipart Upload Migration**: Migrated video upload from base64 to multipart streaming via a dedicated endpoint (`/api/upload/video`), enabling faster and more scalable uploads with backend MIME and quota validation.
+- **Adaptive Polling**: Implemented adaptive polling hook with TanStack Query v5, efficiently updating the progress of videos being processed.
+- **Contract & Error Handling**: Standardized video status contract and error handling via TRPCError, ensuring consistency between backend and frontend.
+- **UX Improvements**: Informative toasts, progress bar, and automatic video list invalidation after upload, processing, or deletion actions.
+- **No new dependencies added**: All improvements were made using the existing stack.
+
+These changes make the video upload and processing flow more robust, scalable, and user-friendly, preparing the system for growth and intensive use.
