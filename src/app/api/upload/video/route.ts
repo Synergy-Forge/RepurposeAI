@@ -152,7 +152,7 @@ export async function POST(req: Request) {
           );
         }
 
-        const canContinue = writeStream.write(Buffer.from(value));
+        const canContinue = writeStream.write(value);
         if (!canContinue) {
           await once(writeStream, "drain");
         }
