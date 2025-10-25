@@ -7,9 +7,7 @@ const getStripeClient = () => {
     throw new Error('STRIPE_SECRET_KEY não está configurada');
   }
   
-  return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-08-27.basil',
-  });
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
 };
 
 export const subscriptionRouter = createTRPCRouter({

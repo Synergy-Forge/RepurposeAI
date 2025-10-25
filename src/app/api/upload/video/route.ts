@@ -12,6 +12,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { fileTypeFromBuffer } from "file-type";
 import { createWriteStream } from "node:fs";
+import { once } from "node:events";
 
 const MB = 1024 * 1024;
 const GB = MB * 1024;
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
     // Detect MIME from a small prefix and stream to disk using a separate tee branch
     const webStream = file.stream();
     // Split stream into two branches: one for detection (small prefix) and one for saving
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const [detectStream, saveStream] = (webStream as ReadableStream<Uint8Array>).tee();
 
     // Read up to 64KB for detection
@@ -125,19 +126,20 @@ export async function POST(req: Request) {
 
     await ensureDirectory(storagePaths.originalsDir);
 
-    // Stream write using the remaining stream from typeProbe
+    // Stream write using the remaining stream from typeProbe (no buffering in memory)
     const writeStream = createWriteStream(absoluteVideoPath);
-    // Fallback: buffer the saveStream to avoid cross-stream type issues
     const reader2 = saveStream.getReader();
-    const parts: Uint8Array[] = [];
-    let readTotal = 0;
-    const MAX_FILE_SIZE = maxUploadSizeBytes; // bound memory usage per plan
-    while (true) {
-      const { done, value } = await reader2.read();
-      if (done) break;
-      if (value) {
-        readTotal += value.byteLength;
-        if (readTotal > MAX_FILE_SIZE) {
+    let writtenTotal = 0;
+    const MAX_FILE_SIZE = maxUploadSizeBytes; // per-plan limit
+
+    try {
+      while (true) {
+        const { done, value } = await reader2.read();
+        if (done) break;
+        if (!value) continue;
+
+        writtenTotal += value.byteLength;
+        if (writtenTotal > MAX_FILE_SIZE) {
           try {
             await reader2.cancel();
           } catch (cancelErr) {
@@ -149,17 +151,18 @@ export async function POST(req: Request) {
             { status: 413 }
           );
         }
-        parts.push(value);
+
+        const canContinue = writeStream.write(Buffer.from(value));
+        if (!canContinue) {
+          await once(writeStream, "drain");
+        }
       }
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        writeStream.end(() => resolve());
+        writeStream.on("error", reject);
+      });
     }
-    const buffer = Buffer.concat(parts.map((u) => Buffer.from(u)));
-    await new Promise<void>((resolve, reject) => {
-      writeStream.write(buffer, (err) => (err ? reject(err) : resolve()));
-    });
-    await new Promise<void>((resolve, reject) => {
-      writeStream.end(() => resolve());
-      writeStream.on("error", reject);
-    });
 
     const publicVideoUrl = toPublicUrl(relativeVideoPath);
     const video = await prisma.video.create({
