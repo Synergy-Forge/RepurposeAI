@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -9,7 +10,6 @@ on:
 jobs:
   build:
     if: github.actor != 'dependabot[bot]'
-
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +29,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Run Tests
+        run: npm run test --if-present
 
       - name: Build Project
         run: npm run build

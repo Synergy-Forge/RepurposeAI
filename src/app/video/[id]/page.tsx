@@ -26,7 +26,7 @@ type VideoStatus = VideoDetailsResponse["video"]["status"];
 type ProcessingStatus = Extract<VideoStatus, "uploading" | "processing">;
 
 const isProcessingStatus = (
-  status: VideoStatus | undefined
+  status: VideoStatus | undefined,
 ): status is ProcessingStatus =>
   status === "uploading" || status === "processing";
 
@@ -88,7 +88,7 @@ export default function VideoDetailsPage() {
 
         return false;
       },
-    }
+    },
   );
 
   const { data, isLoading, isFetching, error } = videoQuery;
@@ -112,7 +112,7 @@ export default function VideoDetailsPage() {
 
     if (data.video.status === "failed" && !hasShownFailureToast) {
       toast.error(
-        "Video processing failed. Please requeue it from the dashboard."
+        "Video processing failed. Please requeue it from the dashboard.",
       );
       setHasShownFailureToast(true);
     }
