@@ -359,8 +359,8 @@ export default function VideoDetailsPage() {
 
                     {clip.hashtags && (
                       <div className="flex flex-wrap gap-1">
-                        {clip.hashtags.split(" ").map((tag) => (
-                          <Badge key={tag} variant="secondary">
+                        {clip.hashtags.split(" ").map((tag, i) => (
+                          <Badge key={`${tag}-${i}`} variant="secondary">
                             {tag}
                           </Badge>
                         ))}
