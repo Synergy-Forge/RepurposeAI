@@ -941,3 +941,16 @@ Resolved a CI/CD pipeline issue where ESLint was incorrectly linting the build o
 - **No new dependencies added**: All improvements were made using the existing stack.
 
 These changes make the video upload and processing flow more robust, scalable, and user-friendly, preparing the system for growth and intensive use.
+
+# Felipe Abe - (25/10/2025)
+
+### Backend hardening, safer uploads, and developer ergonomics
+
+- Improved the video upload pipeline to stream files directly to disk with proper backpressure, avoiding large in-memory buffers and enforcing per-plan size limits during writes.
+- Strengthened MIME validation using a tee’d 64KB probe before persisting, improving safety across supported video formats.
+- Fixed Stripe runtime stability by removing an invalid API version pin and relying on the SDK’s default.
+- Scoped NextAuth debug logs to non‑production environments for cleaner production logs and easier troubleshooting in development.
+- DX upgrades:
+  - Improved `.gitignore` to cover nested `node_modules`, `dist` builds, and generated `public/uploads/`.
+  - Added `.editorconfig` for consistent UTF‑8, EOL, and indentation across editors.
+- No new runtime dependencies added.

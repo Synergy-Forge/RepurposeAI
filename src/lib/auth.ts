@@ -20,7 +20,7 @@ if (!process.env.NEXTAUTH_SECRET) {
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 export const authOptions: NextAuthOptions = {
-  debug: true, // Enable debug logs in both development and production
+  debug: process.env.NODE_ENV === 'development',
   adapter: PrismaAdapter(prisma), // Type assertion removed as it should be properly typed
 
   providers: [
