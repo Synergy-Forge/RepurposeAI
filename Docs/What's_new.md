@@ -966,7 +966,6 @@ These changes make the video upload and processing flow more robust, scalable, a
   - Implemented fallback from `npm ci` → `npm install` to prevent Dependabot PR failures.
   - Ensured reproducible builds across environments.
 - Verified successful build and deployment on Next.js 15.5 with zero warnings.
-  - Added `.editorconfig` for consistent UTF‑8, EOL, and indentation across editors.
 - No new runtime dependencies added.
 
 # Felipe Abe - (25/10/2025)
