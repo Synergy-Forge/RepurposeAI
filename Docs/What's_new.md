@@ -966,3 +966,21 @@ These changes make the video upload and processing flow more robust, scalable, a
   - Implemented fallback from `npm ci` → `npm install` to prevent Dependabot PR failures.
   - Ensured reproducible builds across environments.
 - Verified successful build and deployment on Next.js 15.5 with zero warnings.
+  - Added `.editorconfig` for consistent UTF‑8, EOL, and indentation across editors.
+- No new runtime dependencies added.
+
+# Felipe Abe - (25/10/2025)
+
+### Dependency Maintenance, CI Hardening & Dependabot Stabilization
+
+- **Dependabot Stabilization**: Completed the review and integration of multiple dependency updates (TailwindCSS 4, Zod 4, React Query 5, OpenAI SDK 6, TypeScript 5.9), validating compatibility with the current stack and ensuring build stability across environments.
+- **CI Hardening**: Improved GitHub Actions workflows to:
+  - Skip builds for Dependabot PRs lacking secrets, preventing false negatives.
+  - Introduce a dedicated lightweight lint job for Dependabot updates.
+  - Add fallback environment variables for critical build-time secrets, making builds failproof.
+  - Enable manual triggering of workflows via `workflow_dispatch` for quick validation.
+- **Security & Reliability**: Strengthened pipeline resilience by enforcing environment checks and ensuring consistent Prisma generation, caching, and linting before builds.
+- **Developer Experience**: Streamlined Dependabot auto-merge rules and optimized package caching for faster feedback cycles.
+- **No new runtime dependencies added**: All changes focus on maintainability, CI robustness, and ecosystem health.
+
+These improvements make the repository safer, faster to maintain, and resistant to transient CI or dependency issues, ensuring a smoother developer experience and reliable builds across environments.
