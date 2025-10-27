@@ -1,31 +1,33 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
 
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   background-color: black;
   color: white;
   overflow-x: hidden;
 }
 
 .bg-gradient-global {
-  background: linear-gradient(to right, 
-    rgba(245, 186, 7, 1.0),
+  background: linear-gradient(
+    to right,
+    rgba(245, 186, 7, 1),
     rgba(106, 26, 107, 0.8),
-    rgba(176, 48, 94, 1.0),
+    rgba(176, 48, 94, 1),
     rgba(26, 61, 255, 0.6),
     rgba(255, 255, 255, 0.5)
   );
   background-attachment: fixed;
 }
 @layer base {
-:root {
+  :root {
     --background: #000000;
     --foreground: #ffffff;
     --card: 0 0% 100%;
@@ -46,24 +48,27 @@ body {
     --input: 214.3 31.8% 91.4%;
     --ring: 199 89% 48%;
     --radius: 0.5rem;
-}
+  }
 
-* {
+  * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
   }
 
-  html, body {
+  html,
+  body {
     height: 100%;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    transition: background-color 0.3s, color 0.3s;
+    transition:
+      background-color 0.3s,
+      color 0.3s;
     scroll-behavior: smooth;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: "Space Grotesk", sans-serif;
   }
 
-.dark {
+  .dark {
     --background: 0 0% 4%;
     --foreground: 0 0% 100%;
     --card: 0 0% 10%;
@@ -91,10 +96,8 @@ body {
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
