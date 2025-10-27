@@ -358,7 +358,7 @@ export default function HomePage() {
                                   e instanceof Error
                                     ? e.message
                                     : "Delete failed",
-                                  { id: tId }
+                                  { id: tId },
                                 );
                               }
                             }}
