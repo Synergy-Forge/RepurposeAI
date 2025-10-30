@@ -1,8 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap");
 
 html {
   scroll-behavior: smooth;
@@ -26,6 +26,7 @@ body {
   );
   background-attachment: fixed;
 }
+
 @layer base {
   :root {
     --background: #000000;
@@ -65,7 +66,6 @@ body {
       background-color 0.3s,
       color 0.3s;
     scroll-behavior: smooth;
-    font-family: "Space Grotesk", sans-serif;
   }
 
   .dark {
@@ -96,8 +96,10 @@ body {
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    @apply bg-background text-foreground;
   }
 }

@@ -21,18 +21,10 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Cache node modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
       - name: Install dependencies
         run: |
-          echo "Instalando dependências com npm ci..."
-          npm ci || (echo "npm ci falhou — tentando npm install..." && npm install)
+          echo "Installing dependencies with npm ci..."
+          npm ci || (echo "npm ci failed; trying npm install..." && npm install)
 
       - name: Generate Prisma Client
         run: npx prisma generate
@@ -69,18 +61,10 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Cache node modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
       - name: Install dependencies
         run: |
-          echo "Instalando dependências com npm ci..."
-          npm ci || (echo "npm ci falhou — tentando npm install..." && npm install)
+          echo "Installing dependencies with npm ci..."
+          npm ci || (echo "npm ci failed; trying npm install..." && npm install)
 
       - name: Run Lint (Dependabot)
         run: npm run lint

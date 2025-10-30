@@ -983,3 +983,18 @@ These changes make the video upload and processing flow more robust, scalable, a
 - **No new runtime dependencies added**: All changes focus on maintainability, CI robustness, and ecosystem health.
 
 These improvements make the repository safer, faster to maintain, and resistant to transient CI or dependency issues, ensuring a smoother developer experience and reliable builds across environments.
+
+# Felipe Abe - (29/10/2025)
+
+### Tailwind v3 Rollback & CI Stability
+
+- Rolled back TailwindCSS and PostCSS setup to the stable Tailwind v3 configuration for consistent builds with Next.js 15.5 and Node 20.
+- PostCSS now uses `tailwindcss` and `autoprefixer` plugins via `postcss.config.js` (removed `@tailwindcss/postcss`).
+- Preserved Tailwind v3 utilities in `globals.css` (including `@apply` patterns) and validated a successful production build locally.
+- Simplified GitHub Actions workflow: removed redundant `actions/cache` step (keep `setup-node` cache) and normalized install logs with a clean fallback from `npm ci` to `npm install`.
+- Updated the PR branch `fix/rollback-tailwind3` and triggered CI to verify stability across environments.
+- No new runtime dependencies added.
+
+### Notes
+
+- Previous notes about migrating to `@tailwindcss/postcss` are superseded by this rollback. A future Tailwind v4 migration will be planned with proper CSS/plugin updates and regression coverage.
