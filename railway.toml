@@ -4,7 +4,7 @@ builder = "nixpacks"
 [deploy]
 releaseCommand = "bash scripts/deploy.sh"
 startCommand = "node .next/standalone/server.js"
-healthcheckPath = "/api/health/redis"
+healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
