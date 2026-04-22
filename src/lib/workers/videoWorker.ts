@@ -13,6 +13,7 @@ import {
 } from "@/lib/queues/videoQueue";
 import { processVideoToExtractKeyMoments } from "@/lib/video-processing";
 import { resolveVideoPath } from "@/lib/storage";
+import { EmailService } from "@/lib/email";
 
 export const startVideoWorker = () => {
   console.log("[video-worker] Starting worker...");
@@ -53,9 +54,10 @@ export const startVideoWorker = () => {
   const worker = new Worker<VideoProcessingJob, VideoJobResult>(
     VIDEO_QUEUE_NAME,
     async (job) => {
-      const { videoId, userId, originalUrl, options: _options } = job.data;
+      const { videoId, userId, originalUrl, options } = job.data;
       const startTime = Date.now();
       let cleanupVideo: () => Promise<void> = () => Promise.resolve();
+      let videoRecord: { title: string } | null = null;
 
       console.log(
         `[video-worker] Processing job ${job.id} for video ${videoId} (user: ${userId})`
@@ -63,9 +65,10 @@ export const startVideoWorker = () => {
 
       try {
         // 1. Atualizar status para processing
-        await prisma.video.update({
+        videoRecord = await prisma.video.update({
           where: { id: videoId },
           data: { status: "processing" },
+          select: { title: true },
         });
 
         await job.updateProgress(10);
@@ -80,7 +83,10 @@ export const startVideoWorker = () => {
         await job.updateProgress(20);
         await job.log("Iniciando extração de clips...");
 
-        const processedClips = await processVideoToExtractKeyMoments(videoPath);
+        const { clips: processedClips, transcriptText } =
+          await processVideoToExtractKeyMoments(videoPath, {
+            aspectRatios: options.aspectRatios,
+          });
 
         await job.updateProgress(70);
         await job.log(`${processedClips.length} clips extraídos`);
@@ -109,7 +115,11 @@ export const startVideoWorker = () => {
 
           await tx.video.update({
             where: { id: videoId },
-            data: { status: "completed", updatedAt: new Date() },
+            data: {
+              status: "completed",
+              transcript: transcriptText,
+              updatedAt: new Date(),
+            },
           });
 
           return clips;
@@ -126,6 +136,21 @@ export const startVideoWorker = () => {
         console.log(
           `[video-worker] Job ${job.id} completed in ${duration}ms - ${savedClips.length} clips generated`
         );
+
+        try {
+          const emailService = new EmailService();
+          await emailService.sendProcessingEmail("complete", userId, {
+            title: videoRecord.title,
+            duration,
+            clipsGenerated: savedClips.length,
+            downloadUrl: `${process.env.NEXTAUTH_URL ?? ""}/video/${videoId}`,
+          });
+        } catch (emailErr) {
+          console.error(
+            "[video-worker] Failed to send completion email:",
+            emailErr
+          );
+        }
 
         return {
           success: true,
@@ -160,15 +185,44 @@ export const startVideoWorker = () => {
           );
         }
 
-        // Se não for a última tentativa, lançar erro para retry
-        if (job.attemptsMade < (job.opts.attempts || 3)) {
+        const isLastAttempt =
+          job.attemptsMade >= (job.opts.attempts ?? 3) - 1;
+
+        if (!isLastAttempt) {
           await job.log(
             `Tentativa ${job.attemptsMade + 1} falhou. Tentando novamente...`
           );
           throw new Error(errorMessage);
         }
 
-        // Na última tentativa, retornar resultado com erro
+        // Final permanent failure — refund quota so the user can retry
+        try {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { videosProcessed: { decrement: 1 } },
+          });
+        } catch (quotaErr) {
+          console.error(
+            "[video-worker] Failed to refund quota on permanent failure:",
+            quotaErr
+          );
+        }
+
+        try {
+          const emailService = new EmailService();
+          await emailService.sendProcessingEmail("failed", userId, {
+            title: videoRecord?.title ?? "Your video",
+            duration: Date.now() - startTime,
+            clipsGenerated: 0,
+            downloadUrl: "",
+          });
+        } catch (emailErr) {
+          console.error(
+            "[video-worker] Failed to send failure email:",
+            emailErr
+          );
+        }
+
         return {
           success: false,
           videoId,

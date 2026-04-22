@@ -23,27 +23,45 @@ const templatePreviewSchema = z.object({
 });
 
 export const emailRouter = createTRPCRouter({
-  getUserPreferences: protectedProcedure.query(async ({ ctx: _ctx }) => {
-    // This would query the database for user preferences
-    // For now, return default preferences
+  getUserPreferences: protectedProcedure.query(async ({ ctx }) => {
+    const pref = await ctx.prisma.emailPreference.findUnique({
+      where: { userId: ctx.session.user.id },
+    });
     return {
-      marketingEmails: true,
-      processingUpdates: true,
-      weeklyDigest: true,
-      featureAnnouncements: true,
+      marketingEmails: pref?.marketingEmails ?? true,
+      processingUpdates: pref?.processingUpdates ?? true,
+      weeklyDigest: pref?.weeklyDigest ?? true,
+      featureAnnouncements: pref?.featureAnnouncements ?? true,
     };
   }),
 
   updatePreferences: protectedProcedure
     .input(emailPreferencesSchema)
-    .mutation(async ({ ctx: _ctx, input: _input }) => {
-      // This would update the database
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      await ctx.prisma.emailPreference.upsert({
+        where: { userId },
+        create: { id: userId, userId, ...input },
+        update: input,
+      });
       return { success: true };
     }),
 
-  getEmailHistory: protectedProcedure.query(async ({ ctx: _ctx }) => {
-    // This would query the database for email history
-    return [];
+  getEmailHistory: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.emailLog.findMany({
+      where: { userId: ctx.session.user.id },
+      orderBy: { sentAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        type: true,
+        status: true,
+        subject: true,
+        sentAt: true,
+        deliveredAt: true,
+        openedAt: true,
+      },
+    });
   }),
 
   resendEmail: protectedProcedure

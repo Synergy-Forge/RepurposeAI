@@ -248,9 +248,17 @@ export async function createVideoClip(
   });
 }
 
+export interface ProcessingResult {
+  clips: ProcessedClip[];
+  transcriptText: string;
+}
+
 // The main "orchestrator". This function ties everything together. It is
-// called by your tRPC router and executes each step of the pipeline in the correct order.
-export async function processVideoToExtractKeyMoments(videoPath: string): Promise<ProcessedClip[]> {
+// called by the video worker and executes each step of the pipeline in the correct order.
+export async function processVideoToExtractKeyMoments(
+  videoPath: string,
+  options?: { aspectRatios?: string[] }
+): Promise<ProcessingResult> {
   let audioPath: string | null = null;
   const uploadedClipKeys: string[] = []; // for rollback from storage on error
   const tempClipPaths: string[] = [];    // always cleaned up in finally
@@ -265,14 +273,36 @@ export async function processVideoToExtractKeyMoments(videoPath: string): Promis
     console.log("Step 3: Generating key moments with AI...");
     const keyMoments = await generateKeyMoments(transcript);
 
-    console.log(`Step 4: Found ${keyMoments.length} key moments. Creating clips...`);
-    const processedClips: ProcessedClip[] = [];
-    const aspectRatios = ['9:16'];
+    // Validate timestamps against video duration derived from transcript segments
+    const videoDuration =
+      transcript.segments.length > 0
+        ? transcript.segments[transcript.segments.length - 1].end
+        : Infinity;
 
-    for (const moment of keyMoments) {
+    const validMoments = keyMoments.filter((m) => {
+      const valid =
+        typeof m.startTime === 'number' &&
+        typeof m.endTime === 'number' &&
+        m.startTime >= 0 &&
+        m.endTime > m.startTime &&
+        m.startTime < videoDuration &&
+        m.endTime <= videoDuration + 2; // 2s tolerance for rounding
+      if (!valid) {
+        console.warn(
+          `[video-processing] Skipping out-of-bounds moment: "${m.title}" [${m.startTime}–${m.endTime}] (video ~${videoDuration}s)`
+        );
+      }
+      return valid;
+    });
+
+    console.log(`Step 4: Found ${validMoments.length} valid key moments (${keyMoments.length - validMoments.length} filtered). Creating clips...`);
+    const processedClips: ProcessedClip[] = [];
+    const aspectRatios = options?.aspectRatios?.length ? options.aspectRatios : ['9:16'];
+
+    for (const moment of validMoments) {
       for (const aspectRatio of aspectRatios) {
         const clipId = randomUUID();
-        const clipFileName = `${clipId}_${aspectRatio}.mp4`;
+        const clipFileName = `${clipId}_${aspectRatio.replace(':', 'x')}.mp4`;
         const relativeClipPath = buildUploadsPath('uploads', 'clips', clipFileName);
         const tempOutputPath = join(tmpdir(), clipFileName);
 
@@ -304,7 +334,10 @@ export async function processVideoToExtractKeyMoments(videoPath: string): Promis
       }
     }
     console.log("Step 5: Finished creating all clips.");
-    return processedClips;
+    return {
+      clips: processedClips,
+      transcriptText: transcript.text ?? '',
+    };
   } catch (error) {
     await Promise.all(
       uploadedClipKeys.map((key) =>

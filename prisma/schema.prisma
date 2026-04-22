@@ -101,6 +101,7 @@ model Video {
   description String?
   originalUrl String
   duration    Int?
+  transcript  String?     @db.Text
   status      String      @default("uploading")
   userId      String
   createdAt   DateTime    @default(now())
@@ -115,8 +116,8 @@ model VideoClip {
   id          String   @id @default(cuid())
   title       String
   description String?
-  startTime   Int
-  endTime     Int
+  startTime   Float
+  endTime     Float
   aspectRatio String
   videoUrl    String
   captions    String?  @db.Text

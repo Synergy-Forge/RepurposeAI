@@ -3,6 +3,7 @@ import { ZeptoMailProvider, EmailOptions } from "./providers/zeptomail";
 import { EmailType, EmailTemplateData } from "./types";
 import { getEmailConfig } from "./config";
 import { enqueueEmail, EmailJob } from "@/lib/queues/emailQueue";
+import { prisma } from "@/lib/prisma";
 
 export class EmailService {
   private provider: ZeptoMailProvider;
@@ -86,11 +87,23 @@ export class EmailService {
           ? EmailType.PROCESSING_COMPLETE
           : EmailType.PROCESSING_FAILED;
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, subscriptionStatus: true },
+    });
+
+    if (!user?.email) return false;
+
     const data: EmailTemplateData = {
       user: {
-        name: "User", // TODO: hydrate user data by ID
-        email: "user@example.com",
-        plan: "Free",
+        name: user.name ?? "User",
+        email: user.email,
+        plan:
+          (user.subscriptionStatus as
+            | "Free"
+            | "Starter"
+            | "Creator"
+            | "Producer") ?? "Free",
       },
       video: videoData,
       unsubscribeUrl: `${getEmailConfig().webappUrl}/unsubscribe`,
