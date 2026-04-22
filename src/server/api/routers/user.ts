@@ -164,6 +164,50 @@ export const userRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  changePassword: protectedProcedure
+    .input(
+      z.object({
+        currentPassword: z.string().min(1, 'Current password is required'),
+        newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, password: true },
+      });
+
+      if (!user) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+      }
+
+      if (!user.password) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'No password set on this account',
+        });
+      }
+
+      const matches = await bcrypt.compare(input.currentPassword, user.password);
+      if (!matches) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Current password is incorrect',
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+
+      await ctx.prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      });
+
+      return { success: true };
+    }),
+
   deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 

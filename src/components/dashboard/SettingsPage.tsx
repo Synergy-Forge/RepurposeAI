@@ -41,6 +41,12 @@ export function SettingsPage() {
     dataSharing: false,
     analyticsTracking: true,
   });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const emailPrefsQuery = trpc.email.getUserPreferences.useQuery();
   const subscriptionQuery = trpc.user.getSubscriptionStatus.useQuery();
@@ -54,6 +60,32 @@ export function SettingsPage() {
     onSuccess: () => signOut({ callbackUrl: '/' }),
     onError: (err) => toast.error(err.message),
   });
+  const changePasswordMutation = trpc.user.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success('Password updated');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordError(null);
+    },
+    onError: (err) => {
+      setPasswordError(err.message);
+    },
+  });
+
+  const handleChangePassword = () => {
+    setPasswordError(null);
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New password and confirmation do not match');
+      return;
+    }
+    changePasswordMutation.mutate({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    });
+  };
 
   useEffect(() => {
     if (emailPrefsQuery.data) {
@@ -296,6 +328,67 @@ export function SettingsPage() {
             onChange={(e) => updateSetting('analyticsTracking', e.target.checked)}
             className="rounded border-gray-300 dark:border-gray-600"
           />
+        </div>
+
+        <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <h4 className="font-medium mb-2">Change Password</h4>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Update the password you use to sign in. OAuth-only accounts (Google) can&apos;t change a password here.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium mb-2">Current Password</label>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={passwordForm.currentPassword}
+                onChange={(e) =>
+                  setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
+                }
+                className="dashboard-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">New Password</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={passwordForm.newPassword}
+                onChange={(e) =>
+                  setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
+                }
+                className="dashboard-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Confirm New Password</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) =>
+                  setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                }
+                className="dashboard-input"
+              />
+            </div>
+            {passwordError && (
+              <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>
+            )}
+            <button
+              type="button"
+              onClick={handleChangePassword}
+              disabled={
+                changePasswordMutation.isPending ||
+                !passwordForm.currentPassword ||
+                !passwordForm.newPassword ||
+                !passwordForm.confirmPassword
+              }
+              className="dashboard-btn btn-primary px-4 py-2 rounded text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {changePasswordMutation.isPending ? 'Updating…' : 'Update Password'}
+            </button>
+          </div>
         </div>
 
         <div className="p-4 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/20">
