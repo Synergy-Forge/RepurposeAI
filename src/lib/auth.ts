@@ -7,17 +7,6 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { checkLoginRateLimit } from './rate-limiter';
 
-// Environment Variable Validation
-if (!process.env.GOOGLE_CLIENT_ID) {
-  throw new Error("Missing required environment variable: GOOGLE_CLIENT_ID");
-}
-if (!process.env.GOOGLE_CLIENT_SECRET) {
-  throw new Error("Missing required environment variable: GOOGLE_CLIENT_SECRET");
-}
-if (!process.env.NEXTAUTH_SECRET) {
-  throw new Error("Missing required environment variable: NEXTAUTH_SECRET");
-}
-
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 export const authOptions: NextAuthOptions = {
