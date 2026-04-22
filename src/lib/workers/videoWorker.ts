@@ -12,7 +12,7 @@ import {
   VideoJobResult,
 } from "@/lib/queues/videoQueue";
 import { processVideoToExtractKeyMoments } from "@/lib/video-processing";
-import { resolveStoredPath } from "@/lib/storage";
+import { resolveVideoPath } from "@/lib/storage";
 
 export const startVideoWorker = () => {
   console.log("[video-worker] Starting worker...");
@@ -55,6 +55,7 @@ export const startVideoWorker = () => {
     async (job) => {
       const { videoId, userId, originalUrl, options: _options } = job.data;
       const startTime = Date.now();
+      let cleanupVideo: () => Promise<void> = () => Promise.resolve();
 
       console.log(
         `[video-worker] Processing job ${job.id} for video ${videoId} (user: ${userId})`
@@ -70,8 +71,9 @@ export const startVideoWorker = () => {
         await job.updateProgress(10);
         await job.log("Status atualizado para processing");
 
-        // 2. Validar se arquivo existe
-        const videoPath = resolveStoredPath(originalUrl.replace(/^\//, ""));
+        // 2. Resolve video to a local path (downloads from R2 if the URL is remote)
+        const { path: videoPath, cleanup } = await resolveVideoPath(originalUrl);
+        cleanupVideo = cleanup;
         await job.log(`Processando vídeo: ${videoPath}`);
 
         // 3. Processar vídeo para extrair clips
@@ -83,41 +85,42 @@ export const startVideoWorker = () => {
         await job.updateProgress(70);
         await job.log(`${processedClips.length} clips extraídos`);
 
-        // 4. Salvar clips no banco de dados
+        // 4. Salvar clips e marcar como completed atomicamente
         await job.log("Salvando clips no banco de dados...");
 
-        const savedClips = await Promise.all(
-          processedClips.map((clip) =>
-            prisma.videoClip.create({
-              data: {
-                title: clip.title,
-                description: clip.description,
-                startTime: clip.startTime,
-                endTime: clip.endTime,
-                aspectRatio: clip.aspectRatio,
-                videoUrl: clip.videoUrl,
-                captions: clip.captions,
-                hashtags: clip.hashtags,
-                videoId,
-              },
-            })
-          )
-        );
+        const savedClips = await prisma.$transaction(async (tx) => {
+          const clips = await Promise.all(
+            processedClips.map((clip) =>
+              tx.videoClip.create({
+                data: {
+                  title: clip.title,
+                  description: clip.description,
+                  startTime: clip.startTime,
+                  endTime: clip.endTime,
+                  aspectRatio: clip.aspectRatio,
+                  videoUrl: clip.videoUrl,
+                  captions: clip.captions,
+                  hashtags: clip.hashtags,
+                  videoId,
+                },
+              })
+            )
+          );
+
+          await tx.video.update({
+            where: { id: videoId },
+            data: { status: "completed", updatedAt: new Date() },
+          });
+
+          return clips;
+        });
 
         await job.updateProgress(90);
         await job.log(`${savedClips.length} clips salvos`);
 
-        // 5. Atualizar status para completed
-        await prisma.video.update({
-          where: { id: videoId },
-          data: {
-            status: "completed",
-            updatedAt: new Date(),
-          },
-        });
-
         await job.updateProgress(100);
 
+        await cleanupVideo();
         const duration = Date.now() - startTime;
 
         console.log(
@@ -138,6 +141,8 @@ export const startVideoWorker = () => {
           `[video-worker] Job ${job.id} failed for video ${videoId}:`,
           errorMessage
         );
+
+        await cleanupVideo().catch(() => {});
 
         // Atualizar status para failed no banco
         try {

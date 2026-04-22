@@ -28,6 +28,8 @@ let videoQueueInstance: Queue<VideoProcessingJob, VideoJobResult> | null = null;
 
 export const getVideoQueue = (): Queue<VideoProcessingJob, VideoJobResult> => {
   if (!videoQueueInstance) {
+    // BullMQ 5.x conditional generics (ExtractDataType) don't unify with the
+    // plain Queue<Data, Result> annotation; cast is safe — runtime types match.
     videoQueueInstance = new Queue<VideoProcessingJob, VideoJobResult>(
       VIDEO_QUEUE_NAME,
       {
@@ -47,7 +49,7 @@ export const getVideoQueue = (): Queue<VideoProcessingJob, VideoJobResult> => {
           },
         },
       }
-    );
+    ) as unknown as Queue<VideoProcessingJob, VideoJobResult>;
   }
   return videoQueueInstance;
 };

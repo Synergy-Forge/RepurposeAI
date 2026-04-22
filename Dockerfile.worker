@@ -28,4 +28,4 @@ USER nodejs
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=build --chown=nodejs:nodejs /app/dist ./dist
 
-CMD ["node", "dist/lib/workers/emailWorker.js"]
+CMD ["node", "dist/lib/workers/videoWorker.js"]

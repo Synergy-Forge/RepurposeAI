@@ -9,11 +9,9 @@ import OpenAI from 'openai';
 import { randomUUID } from 'crypto';
 import { unlink as removeFile } from 'fs/promises';
 import {
-  ensureDirectory,
-  storagePaths,
   buildUploadsPath,
-  toPublicUrl,
-  resolveStoredPath,
+  storageProvider,
+  createReadStream,
 } from '@/lib/storage';
 import { getTranscription } from './transcription';
 import { Transcription } from 'openai/resources/audio/transcriptions';
@@ -27,6 +25,8 @@ function getOpenAIClient() {
   }
   return new OpenAI({ apiKey, timeout: 60000 });
 }
+
+const FFMPEG_TIMEOUT_MS = parseInt(process.env.FFMPEG_TIMEOUT_MS ?? '900000', 10);
 
 // ============================================================================
 // Interfaces and Helper Types
@@ -119,15 +119,22 @@ export async function extractAudioFromVideo(videoPath: string): Promise<string> 
       '-ab', '128k', '-ar', '44100', '-y', audioPath,
     ]);
     let errorOutput = '';
+
+    const timer = setTimeout(() => {
+      ffmpeg.kill('SIGKILL');
+      reject(new Error('FFmpeg audio extraction timed out'));
+    }, FFMPEG_TIMEOUT_MS);
+
     ffmpeg.stderr.on('data', (data) => { errorOutput += data.toString(); });
     ffmpeg.on('close', (code) => {
+      clearTimeout(timer);
       if (code === 0) {
         resolve(audioPath);
       } else {
         reject(new Error(`FFmpeg process exited with code ${code}. Stderr: ${errorOutput}`));
       }
     });
-    ffmpeg.on('error', (err) => reject(err));
+    ffmpeg.on('error', (err) => { clearTimeout(timer); reject(err); });
   });
 }
 
@@ -225,12 +232,19 @@ export async function createVideoClip(
     ];
     const ffmpeg = spawn('ffmpeg', args);
     let errorOutput = '';
-    ffmpeg.stderr.on('data', data => errorOutput += data.toString());
-    ffmpeg.on('close', code => {
+
+    const timer = setTimeout(() => {
+      ffmpeg.kill('SIGKILL');
+      reject(new Error('FFmpeg clip creation timed out'));
+    }, FFMPEG_TIMEOUT_MS);
+
+    ffmpeg.stderr.on('data', (data) => { errorOutput += data.toString(); });
+    ffmpeg.on('close', (code) => {
+      clearTimeout(timer);
       if (code === 0) resolve();
       else reject(new Error(`FFmpeg process exited with code ${code}. Stderr: ${errorOutput}`));
     });
-    ffmpeg.on('error', err => reject(err));
+    ffmpeg.on('error', (err) => { clearTimeout(timer); reject(err); });
   });
 }
 
@@ -238,7 +252,8 @@ export async function createVideoClip(
 // called by your tRPC router and executes each step of the pipeline in the correct order.
 export async function processVideoToExtractKeyMoments(videoPath: string): Promise<ProcessedClip[]> {
   let audioPath: string | null = null;
-  const createdClipPaths: string[] = [];
+  const uploadedClipKeys: string[] = []; // for rollback from storage on error
+  const tempClipPaths: string[] = [];    // always cleaned up in finally
 
   try {
     console.log("Step 1: Extracting audio...");
@@ -251,16 +266,16 @@ export async function processVideoToExtractKeyMoments(videoPath: string): Promis
     const keyMoments = await generateKeyMoments(transcript);
 
     console.log(`Step 4: Found ${keyMoments.length} key moments. Creating clips...`);
-    await ensureDirectory(storagePaths.clipsDir);
     const processedClips: ProcessedClip[] = [];
-    const aspectRatios = ['9:16']; // Focusing on one aspect ratio for simplicity
+    const aspectRatios = ['9:16'];
 
     for (const moment of keyMoments) {
       for (const aspectRatio of aspectRatios) {
         const clipId = randomUUID();
         const clipFileName = `${clipId}_${aspectRatio}.mp4`;
         const relativeClipPath = buildUploadsPath('uploads', 'clips', clipFileName);
-        const outputPath = resolveStoredPath(relativeClipPath);
+        const tempOutputPath = join(tmpdir(), clipFileName);
+
         const momentText = transcript.segments
           .filter(seg => seg.start >= moment.startTime && seg.end <= moment.endTime)
           .map(seg => seg.text)
@@ -270,8 +285,11 @@ export async function processVideoToExtractKeyMoments(videoPath: string): Promis
         const captions = await generateCaptionsForClip(moment.title, moment.description, momentText);
 
         console.log(`  - Creating video clip for moment: "${moment.title}"`);
-        await createVideoClip(videoPath, moment.startTime, moment.endTime, aspectRatio, outputPath, captions);
-        createdClipPaths.push(relativeClipPath);
+        await createVideoClip(videoPath, moment.startTime, moment.endTime, aspectRatio, tempOutputPath, captions);
+        tempClipPaths.push(tempOutputPath);
+
+        const clipUrl = await storageProvider.save(createReadStream(tempOutputPath), relativeClipPath);
+        uploadedClipKeys.push(relativeClipPath);
 
         processedClips.push({
           title: moment.title,
@@ -279,7 +297,7 @@ export async function processVideoToExtractKeyMoments(videoPath: string): Promis
           startTime: moment.startTime,
           endTime: moment.endTime,
           aspectRatio,
-          videoUrl: toPublicUrl(relativeClipPath),
+          videoUrl: clipUrl,
           captions,
           hashtags: moment.hashtags.join(' '),
         });
@@ -289,13 +307,18 @@ export async function processVideoToExtractKeyMoments(videoPath: string): Promis
     return processedClips;
   } catch (error) {
     await Promise.all(
-      createdClipPaths.map((relativePath) =>
-        removeFile(resolveStoredPath(relativePath)).catch(err => console.error('Failed to remove clip file during cleanup:', err))
+      uploadedClipKeys.map((key) =>
+        storageProvider.delete(key).catch(err => console.error('Failed to delete clip from storage during cleanup:', err))
       )
     );
     console.error('FATAL ERROR in video processing pipeline:', error);
     throw error;
   } finally {
+    await Promise.all(
+      tempClipPaths.map((p) =>
+        removeFile(p).catch(err => console.error('Failed to remove temp clip file during cleanup:', err))
+      )
+    );
     if (audioPath) {
       await removeFile(audioPath).catch(err => console.error('Failed to remove audio file during cleanup:', err));
     }
