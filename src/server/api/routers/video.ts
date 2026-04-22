@@ -400,19 +400,30 @@ export const videoRouter = createTRPCRouter({
       }
     }),
 
-  getUserVideos: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.session.user.id;
+  getUserVideos: protectedProcedure
+    .input(
+      z.object({
+        cursor: z.string().optional(),
+        limit: z.number().int().min(1).max(100).default(20),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const { cursor, limit } = input;
 
-    const videos = await ctx.prisma.video.findMany({
-      where: { userId },
-      include: {
-        videoClips: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+      const videos = await ctx.prisma.video.findMany({
+        where: { userId },
+        take: limit + 1,
+        cursor: cursor ? { id: cursor } : undefined,
+        include: { videoClips: true },
+        orderBy: { createdAt: "desc" },
+      });
 
-    return videos;
-  }),
+      const nextCursor =
+        videos.length > limit ? videos.pop()!.id : undefined;
+
+      return { videos, nextCursor };
+    }),
 
   getVideoWithClips: protectedProcedure
     .input(z.object({ videoId: z.string() }))

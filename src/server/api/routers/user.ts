@@ -1,6 +1,13 @@
-import { createTRPCRouter, protectedProcedure } from '@/lib/trpc';
+import { createTRPCRouter, protectedProcedure, publicProcedure } from '@/lib/trpc';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import crypto from 'crypto';
+import bcrypt from 'bcrypt';
+import { EmailService } from '@/lib/email';
+import { EmailType } from '@/lib/email/types';
+import { getEmailConfig } from '@/lib/email/config';
+
+const emailService = new EmailService();
 
 export const userRouter = createTRPCRouter({
   getProfile: protectedProcedure.query(async ({ ctx }) => {
@@ -79,10 +86,110 @@ export const userRouter = createTRPCRouter({
     };
   }),
 
+  requestPasswordReset: publicProcedure
+    .input(z.object({ email: z.string().email() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.prisma.user.findUnique({
+        where: { email: input.email },
+        select: { id: true, name: true, email: true, subscriptionStatus: true },
+      });
+
+      // Always return success to prevent email enumeration
+      if (!user?.email) return { success: true };
+
+      const token = crypto.randomBytes(32).toString('hex');
+      const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await ctx.prisma.verificationToken.upsert({
+        where: { token },
+        update: { expires },
+        create: { identifier: user.email, token, expires },
+      });
+
+      const resetUrl = `${getEmailConfig().webappUrl}/reset-password?token=${token}`;
+      const planMap: Record<string, 'Free' | 'Starter' | 'Creator' | 'Producer'> = {
+        starter: 'Starter',
+        creator: 'Creator',
+        producer: 'Producer',
+      };
+
+      await emailService.sendEmail(EmailType.PASSWORD_RESET, user.id, {
+        user: {
+          name: user.name ?? 'there',
+          email: user.email,
+          plan: planMap[user.subscriptionStatus] ?? 'Free',
+        },
+        resetUrl,
+        unsubscribeUrl: `${getEmailConfig().webappUrl}/unsubscribe`,
+        supportUrl: `mailto:${getEmailConfig().supportEmail}`,
+      });
+
+      return { success: true };
+    }),
+
+  resetPassword: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+        password: z.string().min(8, 'Password must be at least 8 characters'),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const record = await ctx.prisma.verificationToken.findUnique({
+        where: { token: input.token },
+      });
+
+      if (!record) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Invalid or expired reset token' });
+      }
+
+      if (record.expires < new Date()) {
+        await ctx.prisma.verificationToken.delete({ where: { token: input.token } });
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Reset token has expired' });
+      }
+
+      const hashedPassword = await bcrypt.hash(input.password, 10);
+
+      await ctx.prisma.user.update({
+        where: { email: record.identifier },
+        data: { password: hashedPassword },
+      });
+
+      await ctx.prisma.verificationToken.delete({ where: { token: input.token } });
+
+      return { success: true };
+    }),
+
+  deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const user = await ctx.prisma.user.findUnique({
+      where: { id: userId },
+      select: { stripeCustomerId: true },
+    });
+
+    if (user?.stripeCustomerId) {
+      const { default: Stripe } = await import('stripe');
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+      const subscriptions = await stripe.subscriptions.list({
+        customer: user.stripeCustomerId,
+        status: 'active',
+        limit: 10,
+      });
+      await Promise.all(
+        subscriptions.data.map((sub) => stripe.subscriptions.cancel(sub.id))
+      );
+    }
+
+    await ctx.prisma.user.delete({ where: { id: userId } });
+
+    return { success: true };
+  }),
+
   getStats: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
 
-    const [videoCount, clipCount, recentVideos, user] = await Promise.all([
+    const [videoCount, clipCount, recentVideos, user, statusGroups] = await Promise.all([
       ctx.prisma.video.count({ where: { userId, status: 'completed' } }),
       ctx.prisma.videoClip.count({ where: { video: { userId } } }),
       ctx.prisma.video.findMany({
@@ -101,7 +208,17 @@ export const userRouter = createTRPCRouter({
         where: { id: userId },
         select: { videosProcessed: true, videoQuotaLimit: true },
       }),
+      ctx.prisma.video.groupBy({
+        by: ['status'],
+        where: { userId },
+        _count: { status: true },
+      }),
     ]);
+
+    const statusCounts: Record<string, number> = {};
+    for (const group of statusGroups) {
+      statusCounts[group.status] = group._count.status;
+    }
 
     return {
       videosProcessed: videoCount,
@@ -115,6 +232,11 @@ export const userRouter = createTRPCRouter({
         updatedAt: v.updatedAt,
         clipCount: v._count.videoClips,
       })),
+      statusCounts: {
+        completed: statusCounts['completed'] ?? 0,
+        processing: (statusCounts['processing'] ?? 0) + (statusCounts['uploading'] ?? 0),
+        failed: statusCounts['failed'] ?? 0,
+      },
     };
   }),
 });

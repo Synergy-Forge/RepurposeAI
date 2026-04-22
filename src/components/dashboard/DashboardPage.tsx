@@ -18,15 +18,19 @@ const roiChartData: ChartData = {
   }],
 };
 
-const projectsChartData: ChartData = {
-  labels: ['Completed', 'Processing', 'Draft'],
-  datasets: [{
-    label: 'Projects',
-    data: [18, 9, 5],
-    backgroundColor: ['#22c55e', '#3b82f6', '#a855f7'],
-    borderWidth: 4,
-  }],
-};
+function buildProjectsChartData(
+  counts: { completed: number; processing: number; failed: number } | undefined
+): ChartData {
+  return {
+    labels: ['Completed', 'Processing', 'Failed'],
+    datasets: [{
+      label: 'Projects',
+      data: [counts?.completed ?? 0, counts?.processing ?? 0, counts?.failed ?? 0],
+      backgroundColor: ['#22c55e', '#3b82f6', '#ef4444'],
+      borderWidth: 4,
+    }],
+  };
+}
 
 const statusColors: Record<string, string> = {
   completed: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
@@ -121,9 +125,12 @@ export function DashboardPage() {
           <div className="dashboard-card p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Project Status</h3>
-              <span className="text-xs text-gray-400">Sample data</span>
             </div>
-            <ChartContainer type="pie" data={projectsChartData} height={300} />
+            <ChartContainer
+              type="pie"
+              data={buildProjectsChartData(statsQuery.data?.statusCounts)}
+              height={300}
+            />
           </div>
         </div>
       </section>

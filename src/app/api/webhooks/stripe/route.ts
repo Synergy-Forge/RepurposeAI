@@ -2,13 +2,16 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
+import { EmailService } from "@/lib/email";
+import { EmailType, EmailTemplateData } from "@/lib/email/types";
+import { getEmailConfig } from "@/lib/email/config";
 
-// Function to initialize Stripe only when needed
+const emailService = new EmailService();
+
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error("STRIPE_SECRET_KEY is not configured");
   }
-
   return new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
@@ -17,31 +20,28 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 async function upsertSubscription(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
 
-  // Find user by Stripe customer ID
   const user = await prisma.user.findUnique({
     where: { stripeCustomerId: customerId },
   });
 
   if (!user) return;
 
-  // Determine subscription plan based on price/product
   let status: "free" | "starter" | "creator" | "producer" = "free";
 
   if (subscription.status === "active" && subscription.items.data.length > 0) {
     const priceId = subscription.items.data[0].price.id;
 
-    // Map Stripe price IDs to subscription plans
     switch (priceId) {
-      case "prod_Sv9zE3Lt3Dza4U": // Starter monthly
-      case "prod_Szk7iWgJ9yfxrq": // Starter yearly
+      case "prod_Sv9zE3Lt3Dza4U":
+      case "prod_Szk7iWgJ9yfxrq":
         status = "starter";
         break;
-      case "prod_SzjVo4rdm3LBx0": // Creator monthly
-      case "prod_Szk5YrAfOq7C0l": // Creator yearly
+      case "prod_SzjVo4rdm3LBx0":
+      case "prod_Szk5YrAfOq7C0l":
         status = "creator";
         break;
-      case "prod_Szjf5hO6PQoUja": // Producer monthly
-      case "prod_Szk4OGazQoSRbi": // Producer yearly
+      case "prod_Szjf5hO6PQoUja":
+      case "prod_Szk4OGazQoSRbi":
         status = "producer";
         break;
       default:
@@ -88,24 +88,16 @@ async function handleCustomerEvent(event: Stripe.Event) {
 
   switch (event.type) {
     case "customer.created":
-      console.log(`Customer created: ${customer.id}`);
-      // Handle customer creation if needed
-      break;
-
     case "customer.updated":
-      console.log(`Customer updated: ${customer.id}`);
-      // Handle customer updates if needed
-      break;
-
     case "customer.deleted":
-      console.log(`Customer deleted: ${customer.id}`);
-      // Handle customer deletion - might need to clean up user data
+      console.log(`Customer event ${event.type}: ${customer.id}`);
       break;
   }
 }
 
 async function handleSubscriptionEvent(event: Stripe.Event) {
   const subscription = event.data.object as Stripe.Subscription;
+  const customerId = subscription.customer as string;
 
   switch (event.type) {
     case "customer.subscription.created":
@@ -117,14 +109,21 @@ async function handleSubscriptionEvent(event: Stripe.Event) {
       await removeSubscription(subscription);
       break;
 
-    case "customer.subscription.paused":
-      console.log(`Subscription paused: ${subscription.id}`);
-      // Handle subscription pause
+    case "customer.subscription.paused": {
+      const user = await prisma.user.findUnique({
+        where: { stripeCustomerId: customerId },
+      });
+      if (user) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { subscriptionStatus: "paused" },
+        });
+      }
       break;
+    }
 
     case "customer.subscription.resumed":
-      console.log(`Subscription resumed: ${subscription.id}`);
-      // Handle subscription resume
+      await upsertSubscription(subscription);
       break;
   }
 }
@@ -133,24 +132,60 @@ async function handleInvoiceEvent(event: Stripe.Event) {
   const invoice = event.data.object as Stripe.Invoice;
 
   switch (event.type) {
-    case "invoice.payment_succeeded":
-      console.log(`Invoice payment succeeded: ${invoice.id}`);
-      // Handle successful payment
-      break;
+    case "invoice.payment_succeeded": {
+      const customerId =
+        typeof invoice.customer === "string"
+          ? invoice.customer
+          : invoice.customer?.id;
+      if (!customerId || !invoice.period_end) break;
 
-    case "invoice.payment_failed":
-      console.log(`Invoice payment failed: ${invoice.id}`);
-      // Handle failed payment - might need to notify user
+      const user = await prisma.user.findUnique({
+        where: { stripeCustomerId: customerId },
+      });
+      if (user) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            subscriptionEndDate: new Date(invoice.period_end * 1000),
+          },
+        });
+      }
       break;
+    }
+
+    case "invoice.payment_failed": {
+      const customerId =
+        typeof invoice.customer === "string"
+          ? invoice.customer
+          : invoice.customer?.id;
+      if (!customerId) break;
+
+      const user = await prisma.user.findUnique({
+        where: { stripeCustomerId: customerId },
+      });
+      if (user) {
+        const planMap: Record<string, EmailTemplateData["user"]["plan"]> = {
+          starter: "Starter",
+          creator: "Creator",
+          producer: "Producer",
+        };
+        const data: EmailTemplateData = {
+          user: {
+            name: user.name ?? "there",
+            email: user.email ?? "",
+            plan: planMap[user.subscriptionStatus] ?? "Free",
+          },
+          unsubscribeUrl: `${getEmailConfig().webappUrl}/unsubscribe`,
+          supportUrl: `mailto:${getEmailConfig().supportEmail}`,
+        };
+        await emailService.sendEmail(EmailType.PAYMENT_FAILED, user.id, data);
+      }
+      break;
+    }
 
     case "invoice.finalized":
-      console.log(`Invoice finalized: ${invoice.id}`);
-      // Handle invoice finalization
-      break;
-
     case "invoice.upcoming":
-      console.log(`Upcoming invoice: ${invoice.id}`);
-      // Handle upcoming invoice notification
+      console.log(`Invoice event ${event.type}: ${invoice.id}`);
       break;
   }
 }
@@ -160,18 +195,9 @@ async function handlePaymentEvent(event: Stripe.Event) {
 
   switch (event.type) {
     case "payment_intent.succeeded":
-      console.log(`Payment succeeded: ${paymentIntent.id}`);
-      // Handle successful payment
-      break;
-
     case "payment_intent.payment_failed":
-      console.log(`Payment failed: ${paymentIntent.id}`);
-      // Handle failed payment
-      break;
-
     case "payment_intent.canceled":
-      console.log(`Payment canceled: ${paymentIntent.id}`);
-      // Handle canceled payment
+      console.log(`Payment intent event ${event.type}: ${paymentIntent.id}`);
       break;
   }
 }
@@ -181,13 +207,8 @@ async function handleCheckoutEvent(event: Stripe.Event) {
 
   switch (event.type) {
     case "checkout.session.completed":
-      console.log(`Checkout session completed: ${session.id}`);
-      // Handle successful checkout completion
-      break;
-
     case "checkout.session.expired":
-      console.log(`Checkout session expired: ${session.id}`);
-      // Handle expired checkout session
+      console.log(`Checkout session event ${event.type}: ${session.id}`);
       break;
   }
 }
@@ -197,18 +218,9 @@ async function handlePriceEvent(event: Stripe.Event) {
 
   switch (event.type) {
     case "price.created":
-      console.log(`Price created: ${price.id}`);
-      // Handle new price creation
-      break;
-
     case "price.updated":
-      console.log(`Price updated: ${price.id}`);
-      // Handle price updates
-      break;
-
     case "price.deleted":
-      console.log(`Price deleted: ${price.id}`);
-      // Handle price deletion
+      console.log(`Price event ${event.type}: ${price.id}`);
       break;
   }
 }
@@ -226,9 +238,7 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
-    // Inicializa o Stripe apenas quando a rota é chamada
     const stripe = getStripe();
-
     const signature = (await headers()).get("stripe-signature");
     if (!signature) {
       return NextResponse.json(
@@ -242,8 +252,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  // Idempotency: skip already-processed events
+  const existing = await prisma.webhookEvent.findUnique({
+    where: { id: event.id },
+  });
+  if (existing) {
+    return NextResponse.json({ received: true });
+  }
+
   try {
-    // Route events to appropriate handlers
     if (event.type.startsWith("customer.")) {
       if (event.type.startsWith("customer.subscription.")) {
         await handleSubscriptionEvent(event);
@@ -261,6 +278,8 @@ export async function POST(req: Request) {
     } else {
       console.log(`Unhandled event type: ${event.type}`);
     }
+
+    await prisma.webhookEvent.create({ data: { id: event.id } });
 
     return NextResponse.json({ received: true });
   } catch (error) {

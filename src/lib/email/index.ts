@@ -1,9 +1,17 @@
 import { User } from "@prisma/client";
+import { render } from "@react-email/render";
+import React from "react";
 import { ZeptoMailProvider, EmailOptions } from "./providers/zeptomail";
 import { EmailType, EmailTemplateData } from "./types";
 import { getEmailConfig } from "./config";
 import { enqueueEmail, EmailJob } from "@/lib/queues/emailQueue";
 import { prisma } from "@/lib/prisma";
+import { WelcomeEmail } from "./templates/auth/WelcomeEmail";
+import { PasswordResetEmail } from "./templates/auth/PasswordResetEmail";
+import { ProcessingCompleteEmail } from "./templates/processing/ProcessingCompleteEmail";
+import { ProcessingFailedEmail } from "./templates/processing/ProcessingFailedEmail";
+import { SubscriptionActivatedEmail } from "./templates/subscription/SubscriptionActivatedEmail";
+import { PaymentFailedEmail } from "./templates/billing/PaymentFailedEmail";
 
 export class EmailService {
   private provider: ZeptoMailProvider;
@@ -130,11 +138,24 @@ export class EmailService {
       cancelled: EmailType.SUBSCRIPTION_CANCELLED,
     };
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true, subscriptionStatus: true },
+    });
+
+    if (!user?.email) return false;
+
+    const planMap: Record<string, EmailTemplateData["user"]["plan"]> = {
+      starter: "Starter",
+      creator: "Creator",
+      producer: "Producer",
+    };
+
     const data: EmailTemplateData = {
       user: {
-        name: "User",
-        email: "user@example.com",
-        plan: "Free",
+        name: user.name ?? "there",
+        email: user.email,
+        plan: planMap[user.subscriptionStatus] ?? "Free",
       },
       subscription: subscriptionData,
       unsubscribeUrl: `${getEmailConfig().webappUrl}/unsubscribe`,
@@ -190,7 +211,33 @@ export class EmailService {
     data: EmailTemplateData
   ): Promise<{ subject: string; html: string }> {
     const subject = this.getSubjectForType(type);
-    const html = this.getHtmlForType(type, data);
+
+    let html: string;
+    switch (type) {
+      case EmailType.WELCOME:
+        html = await render(React.createElement(WelcomeEmail, { data }));
+        break;
+      case EmailType.PROCESSING_COMPLETE:
+        html = await render(React.createElement(ProcessingCompleteEmail, { data }));
+        break;
+      case EmailType.PROCESSING_FAILED:
+        html = await render(React.createElement(ProcessingFailedEmail, { data }));
+        break;
+      case EmailType.SUBSCRIPTION_ACTIVATED:
+      case EmailType.SUBSCRIPTION_UPGRADED:
+      case EmailType.SUBSCRIPTION_DOWNGRADED:
+      case EmailType.SUBSCRIPTION_CANCELLED:
+        html = await render(React.createElement(SubscriptionActivatedEmail, { data }));
+        break;
+      case EmailType.PAYMENT_FAILED:
+        html = await render(React.createElement(PaymentFailedEmail, { data }));
+        break;
+      case EmailType.PASSWORD_RESET:
+        html = await render(React.createElement(PasswordResetEmail, { data }));
+        break;
+      default:
+        html = this.getHtmlForType(type, data);
+    }
 
     return { subject, html };
   }
@@ -214,6 +261,7 @@ export class EmailService {
       [EmailType.REACTIVATION]: "We miss you at Repurpose AI!",
       [EmailType.LOGIN_ALERT]: "New login detected",
       [EmailType.DOWNGRADE_TO_FREE]: "Subscription ended",
+      [EmailType.PASSWORD_RESET]: "Reset your RepurposeAI password",
     };
 
     return subjects[type] || "Repurpose AI Notification";
@@ -268,6 +316,8 @@ export class EmailService {
       [EmailType.LOGIN_ALERT]: "A new login was detected on your account.",
       [EmailType.DOWNGRADE_TO_FREE]:
         "Your subscription has ended and you've been moved to the Free plan.",
+      [EmailType.PASSWORD_RESET]:
+        "Click the link in this email to reset your password. The link expires in 1 hour.",
     };
 
     return messages[type] || "You have a new notification from Repurpose AI.";

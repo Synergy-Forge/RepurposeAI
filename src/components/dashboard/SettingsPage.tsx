@@ -1,12 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { User, Bell, Shield, CreditCard, Download, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SettingsSection } from '@/types/dashboard';
 import { trpc } from '@/lib/trpc-client';
 import { toast } from 'sonner';
+
+const PLAN_LABELS: Record<string, string> = {
+  starter: 'Starter Plan',
+  creator: 'Creator Plan',
+  producer: 'Producer Plan',
+  free: 'Free Plan',
+  paused: 'Paused',
+};
 
 const settingsSections: SettingsSection[] = [
   { id: 'profile', label: 'Profile' },
@@ -35,8 +43,17 @@ export function SettingsPage() {
   });
 
   const emailPrefsQuery = trpc.email.getUserPreferences.useQuery();
+  const subscriptionQuery = trpc.user.getSubscriptionStatus.useQuery();
   const updateProfile = trpc.user.updateProfile.useMutation();
   const updateEmailPrefs = trpc.email.updatePreferences.useMutation();
+  const portalMutation = trpc.subscription.createPortalSession.useMutation({
+    onSuccess: (data) => { window.location.href = data.url; },
+    onError: (err) => toast.error(err.message),
+  });
+  const deleteAccountMutation = trpc.user.deleteAccount.useMutation({
+    onSuccess: () => signOut({ callbackUrl: '/' }),
+    onError: (err) => toast.error(err.message),
+  });
 
   useEffect(() => {
     if (emailPrefsQuery.data) {
@@ -286,74 +303,80 @@ export function SettingsPage() {
           <p className="text-sm text-red-600 dark:text-red-300 mb-4">
             This action cannot be undone. This will permanently delete your account and all associated data.
           </p>
-          <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors">
+          <button
+            disabled={deleteAccountMutation.isPending}
+            onClick={() => {
+              if (confirm('Are you sure you want to delete your account? This cannot be undone.')) {
+                deleteAccountMutation.mutate();
+              }
+            }}
+            className="bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+          >
             <Trash2 className="w-4 h-4 inline mr-2" />
-            Delete Account
+            {deleteAccountMutation.isPending ? 'Deleting…' : 'Delete Account'}
           </button>
         </div>
       </div>
     </div>
   );
 
-  const renderBillingSection = () => (
-    <div className="space-y-6">
-      <h3 className="text-lg font-semibold mb-4">Billing & Subscription</h3>
-      
-      <div className="dashboard-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h4 className="font-medium">Current Plan</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Creator Plan</p>
-          </div>
-          <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium">
-            Active
-          </span>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">$29</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">per month</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold">250</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">videos/month</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold">∞</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">exports</div>
-          </div>
-        </div>
+  const renderBillingSection = () => {
+    const sub = subscriptionQuery.data;
+    const status = sub?.status ?? 'free';
+    const planLabel = PLAN_LABELS[status] ?? 'Free Plan';
+    const isActive = status !== 'free' && status !== 'paused';
+    const endDate = sub?.endDate
+      ? new Date(sub.endDate).toLocaleDateString()
+      : null;
 
-        <div className="flex space-x-3">
-          <button className="dashboard-btn btn-primary px-4 py-2 rounded">
-            Upgrade Plan
-          </button>
-          <button className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-            View Usage
-          </button>
-        </div>
-      </div>
+    return (
+      <div className="space-y-6">
+        <h3 className="text-lg font-semibold mb-4">Billing & Subscription</h3>
 
-      <div className="space-y-4">
-        <h4 className="font-medium">Payment Method</h4>
-        <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <CreditCard className="w-8 h-8 text-gray-400" />
-              <div>
-                <p className="font-medium">•••• •••• •••• 4242</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Expires 12/25</p>
-              </div>
+        <div className="dashboard-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="font-medium">Current Plan</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {subscriptionQuery.isLoading ? 'Loading…' : planLabel}
+              </p>
+              {endDate && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Renews / ends {endDate}
+                </p>
+              )}
             </div>
-            <button className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium">
-              Update
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                isActive
+                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              {isActive ? 'Active' : status === 'paused' ? 'Paused' : 'Free'}
+            </span>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={() => portalMutation.mutate({ returnUrl: window.location.href })}
+              disabled={portalMutation.isPending}
+              className="dashboard-btn btn-primary px-4 py-2 rounded disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {portalMutation.isPending ? 'Redirecting…' : 'Manage Subscription'}
+            </button>
+            <button
+              onClick={() => portalMutation.mutate({ returnUrl: window.location.href })}
+              disabled={portalMutation.isPending}
+              className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              View Usage
             </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderExportSection = () => (
     <div className="space-y-6">

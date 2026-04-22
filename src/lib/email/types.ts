@@ -16,6 +16,7 @@ export enum EmailType {
   WEEKLY_DIGEST = 'WEEKLY_DIGEST',
   FEATURE_ANNOUNCEMENT = 'FEATURE_ANNOUNCEMENT',
   REACTIVATION = 'REACTIVATION',
+  PASSWORD_RESET = 'PASSWORD_RESET',
 }
 
 export enum EmailStatus {
@@ -53,6 +54,7 @@ export interface EmailTemplateData {
   };
   unsubscribeUrl: string;
   supportUrl: string;
+  resetUrl?: string;
 }
 
 export interface QueuedEmail {

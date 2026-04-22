@@ -98,7 +98,7 @@ function LoginForm() {
               className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
-          <div className="mb-6">
+          <div className="mb-2">
             <input
               type="password"
               placeholder="Password"
@@ -107,6 +107,11 @@ function LoginForm() {
               required
               className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
+          </div>
+          <div className="mb-6 text-right">
+            <Link href="/forgot-password" className="text-sm text-purple-400 hover:text-purple-300 hover:underline">
+              Forgot password?
+            </Link>
           </div>
           <button
             type="submit"

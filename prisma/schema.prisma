@@ -95,6 +95,11 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model WebhookEvent {
+  id          String   @id
+  processedAt DateTime @default(now())
+}
+
 model Video {
   id          String      @id @default(cuid())
   title       String
