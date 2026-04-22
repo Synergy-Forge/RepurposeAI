@@ -1,49 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
-import { Plus, Search, Filter, Play, MoreVertical, Calendar, Clock } from 'lucide-react';
+import { Plus, Search, Filter, Play, MoreVertical, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { Project } from '@/types/dashboard';
+import { trpc } from '@/lib/trpc-client';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface ProjectsPageProps {
-  projects?: Project[];
-  onCreateProject?: () => void;
-}
+export function ProjectsPage() {
+  const videosQuery = trpc.video.getUserVideos.useQuery();
 
-// Mock projects data - replace with real data
-const mockProjects: Project[] = [
-  {
-    id: '1',
-    name: 'Marketing Campaign Q4',
-    status: 'completed',
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2024-01-20'),
-    thumbnailUrl: '/api/placeholder/400/225',
-    duration: 920, // seconds
-    size: 245760000, // bytes
-  },
-  {
-    id: '2',
-    name: 'Product Demo Walkthrough',
-    status: 'processing',
-    createdAt: new Date('2024-01-18'),
-    updatedAt: new Date('2024-01-18'),
-    duration: 525,
-    size: 189440000,
-  },
-  {
-    id: '3',
-    name: 'Customer Success Stories',
-    status: 'draft',
-    createdAt: new Date('2024-01-16'),
-    updatedAt: new Date('2024-01-17'),
-    duration: 740,
-    size: 312320000,
-  },
-];
-
-export function ProjectsPage({ projects = mockProjects, onCreateProject: _onCreateProject }: ProjectsPageProps) {
+  const projects: Project[] = (videosQuery.data ?? []).map((v) => ({
+    id: v.id,
+    name: v.title,
+    status:
+      v.status === 'completed'
+        ? 'completed'
+        : v.status === 'processing' || v.status === 'uploading'
+          ? 'processing'
+          : 'draft',
+    createdAt: new Date(v.createdAt),
+    updatedAt: new Date(v.updatedAt),
+    duration: v.duration ?? undefined,
+  }));
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Project['status']>('all');
 
@@ -57,11 +36,6 @@ export function ProjectsPage({ projects = mockProjects, onCreateProject: _onCrea
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(1)} MB`;
   };
 
   const getStatusColor = (status: Project['status']) => {
@@ -96,6 +70,22 @@ export function ProjectsPage({ projects = mockProjects, onCreateProject: _onCrea
       </Link>
     </div>
   );
+
+  if (videosQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-10 w-64 rounded-md" />
+          <Skeleton className="h-10 w-36 rounded-md" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-64 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (projects.length === 0) {
     return (
@@ -161,18 +151,9 @@ export function ProjectsPage({ projects = mockProjects, onCreateProject: _onCrea
             <div key={project.id} className="dashboard-card overflow-hidden group hover:shadow-lg transition-all">
               {/* Thumbnail */}
               <div className="relative aspect-video bg-gradient-to-br from-indigo-500 to-purple-600">
-                {project.thumbnailUrl ? (
-                  <Image
-                    src={project.thumbnailUrl}
-                    alt={project.name}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Play className="w-12 h-12 text-white opacity-70" />
-                  </div>
-                )}
+                <div className="w-full h-full flex items-center justify-center">
+                  <Play className="w-12 h-12 text-white opacity-70" />
+                </div>
                 
                 {/* Play Overlay */}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
@@ -211,19 +192,13 @@ export function ProjectsPage({ projects = mockProjects, onCreateProject: _onCrea
                     <Calendar className="w-3 h-3 mr-1" />
                     {project.updatedAt.toLocaleDateString()}
                   </div>
-                  {project.size && (
-                    <div className="flex items-center">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {formatFileSize(project.size)}
-                    </div>
-                  )}
                 </div>
 
                 {/* Actions */}
                 <div className="flex space-x-2">
-                  <Link href={`/dashboard/editor?project=${project.id}`} className="flex-1">
+                  <Link href={`/video/${project.id}`} className="flex-1">
                     <button className="dashboard-btn btn-primary w-full px-4 py-2 rounded text-sm">
-                      {project.status === 'completed' ? 'Edit' : 'Continue'}
+                      {project.status === 'completed' ? 'View Clips' : 'Continue'}
                     </button>
                   </Link>
                   

@@ -1,15 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Bell, Shield, CreditCard, Download, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SettingsSection } from '@/types/dashboard';
-
-interface SettingsPageProps {
-  settings?: Record<string, unknown>;
-  onSaveSettings?: (settings: Record<string, unknown>) => void;
-}
+import { trpc } from '@/lib/trpc-client';
+import { toast } from 'sonner';
 
 const settingsSections: SettingsSection[] = [
   { id: 'profile', label: 'Profile' },
@@ -19,35 +16,65 @@ const settingsSections: SettingsSection[] = [
   { id: 'export', label: 'Export Data' },
 ];
 
-export function SettingsPage({ onSaveSettings }: SettingsPageProps) {
+export function SettingsPage() {
   const { data: session } = useSession();
   const [activeSection, setActiveSection] = useState('profile');
+  const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState({
-    // Profile settings
     displayName: session?.user?.name || '',
     email: session?.user?.email || '',
     bio: '',
-    
-    // Notification settings
     emailNotifications: true,
     pushNotifications: true,
     weeklyReports: true,
     processingComplete: true,
     newFeatures: false,
-    
-    // Privacy settings
     profileVisibility: 'private',
     dataSharing: false,
     analyticsTracking: true,
   });
 
+  const emailPrefsQuery = trpc.email.getUserPreferences.useQuery();
+  const updateProfile = trpc.user.updateProfile.useMutation();
+  const updateEmailPrefs = trpc.email.updatePreferences.useMutation();
+
+  useEffect(() => {
+    if (emailPrefsQuery.data) {
+      setSettings((prev) => ({
+        ...prev,
+        emailNotifications: emailPrefsQuery.data.processingUpdates,
+        weeklyReports: emailPrefsQuery.data.weeklyDigest,
+        newFeatures: emailPrefsQuery.data.featureAnnouncements,
+        processingComplete: emailPrefsQuery.data.processingUpdates,
+      }));
+    }
+  }, [emailPrefsQuery.data]);
+
   const updateSetting = (key: string, value: string | boolean | number) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleSave = () => {
-    onSaveSettings?.(settings);
-    // Show success message
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await Promise.all([
+        updateProfile.mutateAsync({
+          name: settings.displayName || undefined,
+          email: settings.email || undefined,
+        }),
+        updateEmailPrefs.mutateAsync({
+          marketingEmails: settings.emailNotifications,
+          processingUpdates: settings.processingComplete,
+          weeklyDigest: settings.weeklyReports,
+          featureAnnouncements: settings.newFeatures,
+        }),
+      ]);
+      toast.success('Settings saved');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -425,9 +452,10 @@ export function SettingsPage({ onSaveSettings }: SettingsPageProps) {
             <div className="flex space-x-3">
               <button
                 onClick={handleSave}
-                className="dashboard-btn btn-primary px-6 py-2 rounded-lg font-medium"
+                disabled={isSaving}
+                className="dashboard-btn btn-primary px-6 py-2 rounded-lg font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Save Changes
+                {isSaving ? 'Saving…' : 'Save Changes'}
               </button>
               <button className="border border-gray-300 dark:border-gray-600 px-6 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                 Cancel

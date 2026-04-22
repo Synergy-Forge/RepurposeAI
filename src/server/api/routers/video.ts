@@ -343,7 +343,7 @@ export const videoRouter = createTRPCRouter({
           originalUrl: video.originalUrl,
           options: {
             generateClips: true,
-            transcribe: false, // TODO: Implementar transcrição
+            transcribe: true,
             generateHashtags: true,
           },
         });
@@ -488,7 +488,7 @@ export const videoRouter = createTRPCRouter({
       });
 
       if (!video) {
-        throw new Error("Video not found");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
       }
 
       try {
@@ -515,7 +515,12 @@ export const videoRouter = createTRPCRouter({
         };
       } catch (error) {
         console.error("Error deleting video:", error);
-        throw new Error("Failed to delete video");
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to delete video",
+          cause: error,
+        });
       }
     }),
 
@@ -616,5 +621,13 @@ export const videoRouter = createTRPCRouter({
   getQueueMetrics: protectedProcedure.query(async () => {
     const metrics = await getVideoQueueMetrics();
     return metrics;
+  }),
+
+  getUserVideosForSelect: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.video.findMany({
+      where: { userId: ctx.session.user.id, status: 'completed' },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, title: true, duration: true, createdAt: true },
+    });
   }),
 });
