@@ -6,6 +6,7 @@ import { EmailType, EmailTemplateData } from "./types";
 import { getEmailConfig } from "./config";
 import { enqueueEmail, EmailJob } from "@/lib/queues/emailQueue";
 import { prisma } from "@/lib/prisma";
+import { ensureUnsubscribeToken, buildUnsubscribeUrl } from "./unsubscribe";
 import { WelcomeEmail } from "./templates/auth/WelcomeEmail";
 import { PasswordResetEmail } from "./templates/auth/PasswordResetEmail";
 import { EmailVerificationEmail } from "./templates/auth/EmailVerificationEmail";
@@ -193,10 +194,18 @@ export class EmailService {
     userId: string,
     data: EmailTemplateData
   ): Promise<EmailJob> {
-    const emailContent = await this.generateEmailContent(type, data);
+    // Inject a per-user unsubscribe token so the footer link actually works.
+    // Transactional emails (e.g., password reset) still receive the link; the
+    // public unsubscribe page enforces the token check on click.
+    const token = await ensureUnsubscribeToken(userId);
+    const dataWithToken: EmailTemplateData = token
+      ? { ...data, unsubscribeUrl: buildUnsubscribeUrl(token) }
+      : data;
+
+    const emailContent = await this.generateEmailContent(type, dataWithToken);
 
     const emailOptions: EmailOptions = {
-      to: data.user.email,
+      to: dataWithToken.user.email,
       subject: emailContent.subject,
       html: emailContent.html,
       from: `${getEmailConfig().fromName} <${getEmailConfig().fromEmail}>`,

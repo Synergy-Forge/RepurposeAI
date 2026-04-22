@@ -14,9 +14,15 @@ import {
 } from "@/lib/storage";
 import {
   enqueueVideoProcessing,
+  enqueueClipReRender,
   getVideoJobStatus,
   getVideoQueueMetrics,
 } from "@/lib/queues/videoQueue";
+import {
+  DEFAULT_CAPTION_STYLE,
+  type CaptionStyle,
+  type BrandingConfig,
+} from "@/lib/video-processing";
 
 const MB = 1024 * 1024;
 const GB = MB * 1024;
@@ -45,8 +51,43 @@ const uploadVideoSchema = z.object({
   videoData: z.string(), // Base64 encoded video data
 });
 
+const ALLOWED_AUDIENCES = ["general", "business", "educational", "entertainment"] as const;
+const ALLOWED_PLATFORMS = ["youtube", "tiktok", "instagram", "linkedin", "twitter"] as const;
+
 const processVideoSchema = z.object({
   videoId: z.string(),
+  templateSlug: z.string().optional(),
+  clipLength: z.number().int().min(10).max(300).optional(),
+  audience: z.enum(ALLOWED_AUDIENCES).optional(),
+  platform: z.enum(ALLOWED_PLATFORMS).optional(),
+});
+
+const processWithOptionsSchema = z.object({
+  videoId: z.string(),
+  templateSlug: z.string().optional(),
+  clipLength: z.number().int().min(10).max(300).optional(),
+  audience: z.enum(ALLOWED_AUDIENCES).optional(),
+  platform: z.enum(ALLOWED_PLATFORMS).optional(),
+});
+
+const captionPositionSchema = z.enum(["top", "center", "bottom"]);
+const captionStyleSchema = z.object({
+  fontSize: z.number().int().min(12).max(200),
+  fontColor: z.string().min(1),
+  bgColor: z.string().min(1),
+  bgOpacity: z.number().min(0).max(1),
+  position: captionPositionSchema,
+  fontFamily: z.string().optional(),
+});
+
+const reRenderClipSchema = z.object({
+  clipId: z.string(),
+  startTime: z.number().min(0),
+  endTime: z.number().min(0),
+  aspectRatio: z.enum(["9:16", "1:1", "16:9"]),
+  captions: z.string(),
+  captionStyle: captionStyleSchema.optional(),
+  templateSlug: z.string().optional(),
 });
 
 const clipOutputSchema = z.object({
@@ -265,7 +306,7 @@ export const videoRouter = createTRPCRouter({
   processVideo: protectedProcedure
     .input(processVideoSchema)
     .mutation(async ({ ctx, input }) => {
-      const { videoId } = input;
+      const { videoId, templateSlug, clipLength, audience, platform } = input;
       const userId = ctx.session.user.id;
 
       // Check user's video quota before processing
@@ -302,6 +343,42 @@ export const videoRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
       }
 
+      // Optionally resolve + apply a template and per-video overrides before enqueueing
+      let resolvedTemplateId: string | null | undefined;
+      if (templateSlug) {
+        const template = await ctx.prisma.videoTemplate.findUnique({
+          where: { slug: templateSlug },
+          select: { id: true },
+        });
+        if (!template) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Unknown template: ${templateSlug}`,
+          });
+        }
+        resolvedTemplateId = template.id;
+      }
+
+      const hasOverrides =
+        resolvedTemplateId !== undefined ||
+        clipLength !== undefined ||
+        audience !== undefined ||
+        platform !== undefined;
+
+      if (hasOverrides) {
+        await ctx.prisma.video.update({
+          where: { id: videoId },
+          data: {
+            ...(resolvedTemplateId !== undefined
+              ? { templateId: resolvedTemplateId }
+              : {}),
+            ...(clipLength !== undefined ? { clipLength } : {}),
+            ...(audience !== undefined ? { audience } : {}),
+            ...(platform !== undefined ? { platform } : {}),
+          },
+        });
+      }
+
       // Reserve quota atomically
       const reserveResult = Number(
         await ctx.prisma.$executeRaw`
@@ -336,7 +413,6 @@ export const videoRouter = createTRPCRouter({
           videoId,
         });
 
-        // Enfileirar vídeo para processamento assíncrono
         const job = await enqueueVideoProcessing({
           videoId,
           userId,
@@ -348,7 +424,6 @@ export const videoRouter = createTRPCRouter({
           },
         });
 
-        // Atualizar status para queued
         await ctx.prisma.video.update({
           where: { id: videoId },
           data: { status: "processing" },
@@ -398,6 +473,236 @@ export const videoRouter = createTRPCRouter({
           cause: error,
         });
       }
+    }),
+
+  processWithOptions: protectedProcedure
+    .input(processWithOptionsSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { videoId, templateSlug, clipLength, audience, platform } = input;
+      const userId = ctx.session.user.id;
+
+      const video = await ctx.prisma.video.findFirst({
+        where: { id: videoId, userId },
+      });
+
+      if (!video) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
+      }
+
+      let resolvedTemplateId: string | null | undefined;
+      if (templateSlug) {
+        const template = await ctx.prisma.videoTemplate.findUnique({
+          where: { slug: templateSlug },
+          select: { id: true },
+        });
+        if (!template) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Unknown template: ${templateSlug}`,
+          });
+        }
+        resolvedTemplateId = template.id;
+      }
+
+      await ctx.prisma.video.update({
+        where: { id: videoId },
+        data: {
+          status: "processing",
+          ...(resolvedTemplateId !== undefined
+            ? { templateId: resolvedTemplateId }
+            : {}),
+          ...(clipLength !== undefined ? { clipLength } : {}),
+          ...(audience !== undefined ? { audience } : {}),
+          ...(platform !== undefined ? { platform } : {}),
+        },
+      });
+
+      try {
+        const job = await enqueueVideoProcessing({
+          videoId,
+          userId,
+          originalUrl: video.originalUrl,
+          options: {
+            generateClips: true,
+            transcribe: true,
+            generateHashtags: true,
+            replaceExistingClips: true,
+          },
+        });
+
+        return {
+          success: true,
+          jobId: job.id,
+          videoId,
+          message: "Video re-processing queued. Existing clips will be replaced when new clips are ready.",
+        };
+      } catch (error) {
+        console.error("[video:processWithOptions] failed to enqueue", {
+          userId,
+          videoId,
+          error,
+        });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to queue video for re-processing",
+          cause: error,
+        });
+      }
+    }),
+
+  reRenderClip: protectedProcedure
+    .input(reRenderClipSchema)
+    .mutation(async ({ ctx, input }) => {
+      const { clipId, startTime, endTime, aspectRatio, captions, captionStyle, templateSlug } = input;
+      const userId = ctx.session.user.id;
+
+      if (endTime <= startTime) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "endTime must be greater than startTime",
+        });
+      }
+
+      const clip = await ctx.prisma.videoClip.findUnique({
+        where: { id: clipId },
+        include: {
+          video: {
+            select: { id: true, userId: true, duration: true },
+          },
+        },
+      });
+
+      if (!clip || clip.video.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Clip not found" });
+      }
+
+      const videoDuration = clip.video.duration;
+      if (videoDuration && endTime > videoDuration + 2) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `endTime (${endTime}s) exceeds video duration (${videoDuration}s).`,
+        });
+      }
+
+      let resolvedTemplateId: string | null = null;
+      let resolvedCaptionStyle: CaptionStyle = captionStyle ?? DEFAULT_CAPTION_STYLE;
+      if (templateSlug) {
+        const template = await ctx.prisma.videoTemplate.findUnique({
+          where: { slug: templateSlug },
+        });
+        if (!template) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Unknown template: ${templateSlug}`,
+          });
+        }
+        resolvedTemplateId = template.id;
+        if (!captionStyle) {
+          resolvedCaptionStyle = template.captionStyle as unknown as CaptionStyle;
+        }
+      } else if (clip.templateId) {
+        resolvedTemplateId = clip.templateId;
+      }
+
+      const branding = await ctx.prisma.userBranding.findUnique({
+        where: { userId },
+      });
+
+      const brandingConfig: BrandingConfig | undefined =
+        branding?.watermarkEnabled && branding.logoUrl
+          ? { enabled: true, logoPath: branding.logoUrl }
+          : undefined;
+
+      try {
+        const job = await enqueueClipReRender({
+          clipId,
+          userId,
+          videoId: clip.video.id,
+          startTime,
+          endTime,
+          aspectRatio,
+          captions,
+          captionStyle: resolvedCaptionStyle,
+          branding: brandingConfig,
+          templateId: resolvedTemplateId,
+        });
+
+        return {
+          success: true,
+          jobId: job.id,
+          clipId,
+          message: "Clip re-render queued.",
+        };
+      } catch (error) {
+        console.error("[video:reRenderClip] failed to enqueue", {
+          userId,
+          clipId,
+          error,
+        });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to queue clip for re-rendering",
+          cause: error,
+        });
+      }
+    }),
+
+  getAllUserClips: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+    return ctx.prisma.videoClip.findMany({
+      where: { video: { userId } },
+      include: {
+        video: { select: { id: true, title: true, duration: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  }),
+
+  getClipForEditor: protectedProcedure
+    .input(z.object({ clipId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const clip = await ctx.prisma.videoClip.findUnique({
+        where: { id: input.clipId },
+        include: {
+          video: {
+            select: {
+              id: true,
+              title: true,
+              duration: true,
+              userId: true,
+              originalUrl: true,
+            },
+          },
+          template: true,
+        },
+      });
+
+      if (!clip || clip.video.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Clip not found" });
+      }
+
+      return {
+        id: clip.id,
+        title: clip.title,
+        description: clip.description,
+        startTime: clip.startTime,
+        endTime: clip.endTime,
+        aspectRatio: clip.aspectRatio,
+        videoUrl: clip.videoUrl,
+        captions: clip.captions,
+        hashtags: clip.hashtags,
+        captionStyle: clip.captionStyle as unknown as CaptionStyle | null,
+        templateSlug: clip.template?.slug ?? null,
+        video: {
+          id: clip.video.id,
+          title: clip.video.title,
+          duration: clip.video.duration,
+          originalUrl: clip.video.originalUrl,
+        },
+      };
     }),
 
   getUserVideos: protectedProcedure

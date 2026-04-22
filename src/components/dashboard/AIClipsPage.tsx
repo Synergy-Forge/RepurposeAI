@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Clock, Users, Target, Upload } from 'lucide-react';
+import { Sparkles, Clock, Users, Target, Upload, Brain, Scissors, Rocket, Layout } from 'lucide-react';
+import { toast } from 'sonner';
 import { AIClipFinderParams } from '@/types/dashboard';
 import { trpc } from '@/lib/trpc-client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,11 +12,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function AIClipsPage() {
   const router = useRouter();
   const [selectedVideo, setSelectedVideo] = useState<string>('');
+  const [templateSlug, setTemplateSlug] = useState<string>('');
   const [clipLength, setClipLength] = useState<number>(30);
   const [audience, setAudience] = useState<AIClipFinderParams['audience']>('general');
   const [platform, setPlatform] = useState<AIClipFinderParams['platform']>('youtube');
 
   const videosQuery = trpc.video.getUserVideosForSelect.useQuery();
+  const templatesQuery = trpc.template.list.useQuery();
+
+  const processWithOptions = trpc.video.processWithOptions.useMutation({
+    onSuccess: (data) => {
+      toast.success('Re-processing queued. Opening the video page…');
+      router.push(`/video/${data.videoId}`);
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to start AI Clip Finder');
+    },
+  });
 
   const formatDuration = (seconds: number | null): string => {
     if (!seconds) return '';
@@ -26,7 +39,13 @@ export function AIClipsPage() {
 
   const handleStartFinder = () => {
     if (!selectedVideo) return;
-    router.push(`/video/${selectedVideo}`);
+    processWithOptions.mutate({
+      videoId: selectedVideo,
+      templateSlug: templateSlug || undefined,
+      clipLength,
+      audience,
+      platform,
+    });
   };
 
   return (
@@ -63,7 +82,7 @@ export function AIClipsPage() {
               </div>
             ) : videosQuery.data?.length === 0 ? (
               <div className="p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
-                <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                <Upload className="w-10 h-10 mx-auto mb-2 text-gray-500 dark:text-gray-400" />
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                   No completed videos yet. Upload and process a video first.
                 </p>
@@ -87,6 +106,30 @@ export function AIClipsPage() {
                 ))}
               </select>
             )}
+          </div>
+
+          {/* Template Picker */}
+          <div>
+            <label className="block text-sm font-medium mb-3">
+              <Layout className="w-4 h-4 inline mr-2" />
+              Template (optional)
+            </label>
+            <select
+              value={templateSlug}
+              onChange={(e) => setTemplateSlug(e.target.value)}
+              className="dashboard-input"
+              disabled={templatesQuery.isLoading}
+            >
+              <option value="">(None — use the settings below)</option>
+              {templatesQuery.data?.map((t) => (
+                <option key={t.slug} value={t.slug}>
+                  {t.name} — {t.aspectRatio}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Templates bundle aspect ratio, caption style, and AI prompt tuning. The options below override the template&apos;s clip length, audience, and platform.
+            </p>
           </div>
 
           {/* Grid for other options */}
@@ -151,12 +194,15 @@ export function AIClipsPage() {
           <div className="pt-4">
             <button
               onClick={handleStartFinder}
-              disabled={!selectedVideo || videosQuery.isLoading}
+              disabled={!selectedVideo || videosQuery.isLoading || processWithOptions.isPending}
               className="dashboard-btn btn-primary px-8 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Sparkles className="w-5 h-5 inline mr-2" />
-              View AI Clips
+              {processWithOptions.isPending ? 'Queueing…' : 'Run AI Clip Finder'}
             </button>
+            <p className="text-xs text-gray-500 mt-3">
+              Running the AI Clip Finder on a completed video will replace its existing clips with a freshly generated set. Transcription is reused so this is faster than a first-time upload.
+            </p>
           </div>
         </div>
       </div>
@@ -168,7 +214,7 @@ export function AIClipsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="text-center">
             <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">🎯</span>
+              <Brain className="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
             </div>
             <h3 className="font-semibold mb-2">Analyze Content</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -178,7 +224,7 @@ export function AIClipsPage() {
 
           <div className="text-center">
             <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">✂️</span>
+              <Scissors className="w-7 h-7 text-purple-600 dark:text-purple-400" />
             </div>
             <h3 className="font-semibold mb-2">Smart Extraction</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -188,7 +234,7 @@ export function AIClipsPage() {
 
           <div className="text-center">
             <div className="w-16 h-16 bg-pink-100 dark:bg-pink-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">🚀</span>
+              <Rocket className="w-7 h-7 text-pink-600 dark:text-pink-400" />
             </div>
             <h3 className="font-semibold mb-2">Optimize & Export</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">

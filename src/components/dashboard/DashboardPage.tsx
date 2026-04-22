@@ -1,6 +1,16 @@
 'use client';
 
-import { Video, Film, Clock, TrendingUp } from 'lucide-react';
+import {
+  Video,
+  Film,
+  Gauge,
+  BatteryMedium,
+  CheckCircle2,
+  Loader2,
+  Upload as UploadIcon,
+  AlertCircle,
+  type LucideIcon,
+} from 'lucide-react';
 import { KPICard } from './KPICard';
 import { ChartContainer } from './ChartContainer';
 import { ChartData } from '@/types/dashboard';
@@ -46,6 +56,13 @@ const statusIcons: Record<string, string> = {
   failed: 'bg-red-500',
 };
 
+const statusIconMap: Record<string, LucideIcon> = {
+  completed: CheckCircle2,
+  processing: Loader2,
+  uploading: UploadIcon,
+  failed: AlertCircle,
+};
+
 function timeAgo(date: Date): string {
   const diffMs = Date.now() - new Date(date).getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -73,26 +90,26 @@ export function DashboardPage() {
             <KPICard
               title="Videos Processed"
               value={statsQuery.data?.videosProcessed ?? 0}
-              icon={<Video className="w-7 h-7" />}
+              icon={<Video className="w-6 h-6" />}
               iconColor="#4f46e5"
             />
             <KPICard
               title="Clips Generated"
               value={statsQuery.data?.clipsGenerated ?? 0}
-              icon={<Film className="w-7 h-7" />}
+              icon={<Film className="w-6 h-6" />}
               iconColor="#8b5cf6"
             />
             <KPICard
               title="Quota Used"
               value={`${statsQuery.data?.quotaUsed ?? 0} / ${statsQuery.data?.quotaLimit ?? 5}`}
-              icon={<TrendingUp className="w-7 h-7" />}
+              icon={<Gauge className="w-6 h-6" />}
               iconColor="#ec4899"
             />
             <KPICard
               title="Quota Remaining"
               value={Math.max(0, (statsQuery.data?.quotaLimit ?? 5) - (statsQuery.data?.quotaUsed ?? 0))}
               unit="videos"
-              icon={<Clock className="w-7 h-7" />}
+              icon={<BatteryMedium className="w-6 h-6" />}
               iconColor="#f97316"
             />
           </>
@@ -147,16 +164,22 @@ export function DashboardPage() {
           </div>
         ) : statsQuery.data?.recentActivity.length === 0 ? (
           <div className="py-10 text-center text-gray-500 dark:text-gray-400">
-            <Video className="w-12 h-12 mx-auto mb-3 opacity-40" />
+            <Video className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p>No activity yet. Upload your first video to get started.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {statsQuery.data?.recentActivity.map((item) => (
               <div key={item.id} className="flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className={`w-10 h-10 ${statusIcons[item.status] ?? 'bg-gray-500'} rounded-full flex items-center justify-center flex-shrink-0`}>
-                  <Video className="w-5 h-5 text-white" />
-                </div>
+                {(() => {
+                  const Icon = statusIconMap[item.status] ?? Video;
+                  const spin = item.status === 'processing' ? 'animate-spin' : '';
+                  return (
+                    <div className={`w-10 h-10 ${statusIcons[item.status] ?? 'bg-gray-500'} rounded-full flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`w-5 h-5 text-white ${spin}`} />
+                    </div>
+                  );
+                })()}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{item.title}</p>
                   <p className="text-sm text-gray-500">
