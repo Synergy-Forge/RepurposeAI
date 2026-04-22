@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
-import { User, Bell, Shield, CreditCard, Download, Trash2 } from 'lucide-react';
+import { User, Bell, Shield, CreditCard, Download, Trash2, Palette, Upload as UploadIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SettingsSection } from '@/types/dashboard';
 import { trpc } from '@/lib/trpc-client';
 import { toast } from 'sonner';
+
+const PRO_PLANS = new Set(['pro', 'enterprise', 'creator', 'producer']);
 
 const PLAN_LABELS: Record<string, string> = {
   starter: 'Starter Plan',
@@ -20,6 +23,7 @@ const settingsSections: SettingsSection[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'privacy', label: 'Privacy & Security' },
+  { id: 'branding', label: 'Branding' },
   { id: 'billing', label: 'Billing' },
   { id: 'export', label: 'Export Data' },
 ];
@@ -50,6 +54,62 @@ export function SettingsPage() {
 
   const emailPrefsQuery = trpc.email.getUserPreferences.useQuery();
   const subscriptionQuery = trpc.user.getSubscriptionStatus.useQuery();
+  const brandingQuery = trpc.template.getUserBranding.useQuery();
+  const utils = trpc.useUtils();
+
+  const [brandingDraft, setBrandingDraft] = useState<{
+    primaryColor: string;
+    watermarkEnabled: boolean;
+  }>({ primaryColor: '#6366f1', watermarkEnabled: false });
+  const [pendingLogo, setPendingLogo] = useState<{ base64: string; previewUrl: string } | null>(null);
+  const [clearLogoRequested, setClearLogoRequested] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+
+  const updateBranding = trpc.template.updateUserBranding.useMutation({
+    onSuccess: () => {
+      toast.success('Branding saved');
+      setPendingLogo(null);
+      setClearLogoRequested(false);
+      utils.template.getUserBranding.invalidate();
+    },
+    onError: (err) => toast.error(err.message || 'Failed to save branding'),
+  });
+
+  useEffect(() => {
+    if (brandingQuery.data) {
+      setBrandingDraft({
+        primaryColor: brandingQuery.data.primaryColor ?? '#6366f1',
+        watermarkEnabled: brandingQuery.data.watermarkEnabled,
+      });
+    }
+  }, [brandingQuery.data]);
+
+  const onPickLogo = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose a PNG or JPEG image');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be 2MB or smaller');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1] ?? '';
+      setPendingLogo({ base64, previewUrl: result });
+      setClearLogoRequested(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveBranding = () => {
+    updateBranding.mutate({
+      primaryColor: brandingDraft.primaryColor,
+      watermarkEnabled: brandingDraft.watermarkEnabled,
+      logoBase64: clearLogoRequested ? null : pendingLogo?.base64,
+    });
+  };
   const updateProfile = trpc.user.updateProfile.useMutation();
   const updateEmailPrefs = trpc.email.updatePreferences.useMutation();
   const portalMutation = trpc.subscription.createPortalSession.useMutation({
@@ -413,6 +473,146 @@ export function SettingsPage() {
     </div>
   );
 
+  const renderBrandingSection = () => {
+    const plan = subscriptionQuery.data?.status ?? 'free';
+    const isProPlan = PRO_PLANS.has(plan.toLowerCase());
+    const currentLogoUrl = brandingQuery.data?.logoUrl;
+    const logoPreview = pendingLogo?.previewUrl
+      ? pendingLogo.previewUrl
+      : clearLogoRequested
+        ? null
+        : currentLogoUrl ?? null;
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <Palette className="w-5 h-5 text-indigo-600" />
+          <h3 className="text-lg font-semibold">Branding</h3>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Apply your brand to generated clips. Your logo is composited onto each clip when the watermark is enabled.
+        </p>
+
+        {!isProPlan && (
+          <div className="p-4 border border-yellow-200 dark:border-yellow-800 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-sm">
+            Custom branding is available on the Pro plan and above. Upgrade to enable the watermark.
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <label className="block text-sm font-medium mb-3">Logo</label>
+            <div className="flex items-center gap-6">
+              <div className="w-24 h-24 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                {logoPreview ? (
+                  <Image
+                    src={logoPreview}
+                    alt="Brand logo"
+                    width={96}
+                    height={96}
+                    className="object-contain"
+                    unoptimized
+                  />
+                ) : (
+                  <span className="text-xs text-gray-400">No logo</span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) onPickLogo(file);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={!isProPlan}
+                  className="dashboard-btn btn-primary px-4 py-2 rounded text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <UploadIcon className="w-4 h-4" />
+                  Choose PNG or JPEG
+                </button>
+                {logoPreview && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingLogo(null);
+                      setClearLogoRequested(true);
+                    }}
+                    className="text-sm text-gray-500 hover:text-red-600"
+                  >
+                    Remove logo
+                  </button>
+                )}
+                <p className="text-xs text-gray-500">Max 2MB. Will be scaled down automatically.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <label className="block text-sm font-medium mb-2">Primary color</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={brandingDraft.primaryColor}
+                onChange={(e) =>
+                  setBrandingDraft((prev) => ({ ...prev, primaryColor: e.target.value }))
+                }
+                className="h-10 w-16 rounded border border-gray-300 dark:border-gray-600 bg-transparent"
+              />
+              <input
+                type="text"
+                value={brandingDraft.primaryColor}
+                onChange={(e) =>
+                  setBrandingDraft((prev) => ({ ...prev, primaryColor: e.target.value }))
+                }
+                className="dashboard-input w-32"
+                placeholder="#6366f1"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Reserved for future use (caption accents, email footers). Stored with your profile.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div>
+              <h4 className="font-medium">Watermark on clips</h4>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Overlay your logo in the top-right corner of every rendered clip.
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              checked={brandingDraft.watermarkEnabled}
+              disabled={!isProPlan}
+              onChange={(e) =>
+                setBrandingDraft((prev) => ({ ...prev, watermarkEnabled: e.target.checked }))
+              }
+              className="rounded border-gray-300 dark:border-gray-600"
+            />
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={handleSaveBranding}
+              disabled={updateBranding.isPending}
+              className="dashboard-btn btn-primary px-6 py-2 rounded-lg font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {updateBranding.isPending ? 'Saving…' : 'Save branding'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderBillingSection = () => {
     const sub = subscriptionQuery.data;
     const status = sub?.status ?? 'free';
@@ -520,6 +720,8 @@ export function SettingsPage() {
         return renderNotificationsSection();
       case 'privacy':
         return renderPrivacySection();
+      case 'branding':
+        return renderBrandingSection();
       case 'billing':
         return renderBillingSection();
       case 'export':
@@ -548,6 +750,7 @@ export function SettingsPage() {
                   {section.id === 'profile' && <User className="w-4 h-4" />}
                   {section.id === 'notifications' && <Bell className="w-4 h-4" />}
                   {section.id === 'privacy' && <Shield className="w-4 h-4" />}
+                  {section.id === 'branding' && <Palette className="w-4 h-4" />}
                   {section.id === 'billing' && <CreditCard className="w-4 h-4" />}
                   {section.id === 'export' && <Download className="w-4 h-4" />}
                   <span>{section.label}</span>

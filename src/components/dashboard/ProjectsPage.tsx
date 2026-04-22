@@ -60,7 +60,7 @@ export function ProjectsPage() {
   const EmptyState = () => (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
-        <Plus className="w-12 h-12 text-gray-400" />
+        <Plus className="w-10 h-10 text-gray-500 dark:text-gray-400" />
       </div>
 
       <h3 className="text-xl font-semibold mb-2">No projects yet</h3>
@@ -107,7 +107,7 @@ export function ProjectsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1 max-w-md">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
               placeholder="Search projects..."
@@ -120,7 +120,7 @@ export function ProjectsPage() {
 
         <div className="flex items-center space-x-3">
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
@@ -145,7 +145,7 @@ export function ProjectsPage() {
       {/* Projects Grid */}
       {filteredProjects.length === 0 ? (
         <div className="dashboard-card p-12 text-center">
-          <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <Search className="w-10 h-10 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">No projects found</h3>
           <p className="text-gray-600 dark:text-gray-400">
             Try adjusting your search or filter criteria.
@@ -189,7 +189,7 @@ export function ProjectsPage() {
                   </h3>
 
                   <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-all">
-                    <MoreVertical className="w-4 h-4 text-gray-400" />
+                    <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
 

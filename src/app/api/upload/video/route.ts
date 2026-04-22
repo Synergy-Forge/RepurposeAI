@@ -27,6 +27,17 @@ const ALLOWED_VIDEO_MIME_TYPES = new Set<string>([
   "video/avi",
 ]);
 
+const ALLOWED_AUDIENCES = new Set(["general", "business", "educational", "entertainment"]);
+const ALLOWED_PLATFORMS = new Set(["youtube", "tiktok", "instagram", "linkedin", "twitter"]);
+
+function sanitizeIntegerInRange(value: string | null, min: number, max: number): number | null {
+  if (!value) return null;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return null;
+  if (parsed < min || parsed > max) return null;
+  return parsed;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -38,6 +49,10 @@ export async function POST(req: Request) {
     const file = form.get("file");
     const title = (form.get("title") as string | null) ?? null;
     const description = (form.get("description") as string | null) ?? null;
+    const templateSlug = (form.get("templateSlug") as string | null) ?? null;
+    const audienceRaw = (form.get("audience") as string | null) ?? null;
+    const platformRaw = (form.get("platform") as string | null) ?? null;
+    const clipLengthRaw = (form.get("clipLength") as string | null) ?? null;
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 });
@@ -66,7 +81,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // Detect MIME from a small prefix while streaming the rest to storage
+    // Validate optional template + overrides before we commit to storing the video
+    let templateId: string | null = null;
+    if (templateSlug) {
+      const template = await prisma.videoTemplate.findUnique({
+        where: { slug: templateSlug },
+        select: { id: true },
+      });
+      if (!template) {
+        return NextResponse.json(
+          { error: `Unknown template: ${templateSlug}` },
+          { status: 400 }
+        );
+      }
+      templateId = template.id;
+    }
+
+    const audience =
+      audienceRaw && ALLOWED_AUDIENCES.has(audienceRaw) ? audienceRaw : null;
+    const platform =
+      platformRaw && ALLOWED_PLATFORMS.has(platformRaw) ? platformRaw : null;
+    const clipLength = sanitizeIntegerInRange(clipLengthRaw, 10, 300);
+
     const webStream = file.stream();
     const [detectStream, saveStream] = (webStream as ReadableStream<Uint8Array>).tee();
 
@@ -107,7 +143,6 @@ export async function POST(req: Request) {
     const videoFileName = `${randomUUID()}.${videoFileExtension}`;
     const relativeVideoPath = buildUploadsPath("uploads", "videos", videoFileName);
 
-    // Stream saveStream → Node Readable → size guard → storage provider
     const nodeReadable = Readable.fromWeb(
       saveStream as Parameters<typeof Readable.fromWeb>[0]
     );
@@ -154,6 +189,10 @@ export async function POST(req: Request) {
         userId: session.user.id,
         status: "uploading",
         updatedAt: new Date(),
+        templateId,
+        audience,
+        platform,
+        clipLength,
       },
       select: { id: true },
     });

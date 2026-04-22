@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useDropzone } from "react-dropzone";
-import { Upload, X, Play, FileVideo, Check } from "lucide-react";
+import { Upload, X, Play, FileVideo, Check, Video, Zap, Layout } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc-client";
@@ -26,6 +27,18 @@ export function UploadPage({ onUpload }: UploadPageProps) {
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [dragActive, _setDragActive] = useState(false);
   const processingIdsRef = useRef<Set<string>>(new Set());
+  const [templateSlug, setTemplateSlug] = useState<string>("");
+
+  const searchParams = useSearchParams();
+  const templatesQuery = trpc.template.list.useQuery();
+
+  // Pre-fill the template picker from a ?template=<slug> link (e.g. from /dashboard/templates)
+  useEffect(() => {
+    const fromQuery = searchParams.get("template");
+    if (fromQuery) {
+      setTemplateSlug(fromQuery);
+    }
+  }, [searchParams]);
 
   const utils = trpc.useUtils();
   const processVideo = trpc.video.processVideo.useMutation({
@@ -73,6 +86,9 @@ export function UploadPage({ onUpload }: UploadPageProps) {
           const form = new FormData();
           form.append("file", item.file);
           form.append("title", title);
+          if (templateSlug) {
+            form.append("templateSlug", templateSlug);
+          }
           const res = await fetch("/api/upload/video", {
             method: "POST",
             body: form,
@@ -95,7 +111,10 @@ export function UploadPage({ onUpload }: UploadPageProps) {
 
           // Inicia processamento
           const procToast = toast.loading("Queuing for processing...");
-          await processVideo.mutateAsync({ videoId });
+          await processVideo.mutateAsync({
+            videoId,
+            ...(templateSlug ? { templateSlug } : {}),
+          });
           toast.success("Processing started", { id: procToast });
 
           processingIdsRef.current.add(videoId);
@@ -112,7 +131,7 @@ export function UploadPage({ onUpload }: UploadPageProps) {
         }
       }
     },
-    [onUpload, processVideo, utils.video.getUserVideos]
+    [onUpload, processVideo, utils.video.getUserVideos, templateSlug]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -151,8 +170,46 @@ export function UploadPage({ onUpload }: UploadPageProps) {
     });
   }, [uploadQueue, polledMap]);
 
+  const selectedTemplate = templatesQuery.data?.find((t) => t.slug === templateSlug) ?? null;
+
   return (
     <div className="space-y-8">
+      {/* Template Picker */}
+      <section className="dashboard-card p-6">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Layout className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div className="flex-1">
+            <label htmlFor="template-picker" className="block text-sm font-semibold mb-1">
+              Template (optional)
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Picking a template sets the aspect ratio, caption style, and AI prompt for this upload. Leave blank for the defaults.
+            </p>
+            <select
+              id="template-picker"
+              value={templateSlug}
+              onChange={(e) => setTemplateSlug(e.target.value)}
+              className="dashboard-input"
+              disabled={templatesQuery.isLoading}
+            >
+              <option value="">(No template — default 9:16 vertical)</option>
+              {templatesQuery.data?.map((t) => (
+                <option key={t.slug} value={t.slug}>
+                  {t.name} — {t.aspectRatio}, {t.clipLengthMin}–{t.clipLengthMax}s
+                </option>
+              ))}
+            </select>
+            {selectedTemplate && (
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                {selectedTemplate.description}
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Upload Section */}
       <section className="dashboard-card">
         <div
@@ -219,7 +276,7 @@ export function UploadPage({ onUpload }: UploadPageProps) {
                           onClick={() => removeFromQueue(upload.file)}
                           className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
                         >
-                          <X className="w-4 h-4 text-gray-400" />
+                          <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         </button>
                       </div>
                     </div>
@@ -277,8 +334,9 @@ export function UploadPage({ onUpload }: UploadPageProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <h4 className="font-medium text-indigo-600 dark:text-indigo-400">
-              📹 Video Quality
+            <h4 className="font-medium text-indigo-600 dark:text-indigo-400 flex items-center">
+              <Video className="w-5 h-5 mr-2" />
+              Video Quality
             </h4>
             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
               <li>• Upload in the highest quality available</li>
@@ -288,8 +346,9 @@ export function UploadPage({ onUpload }: UploadPageProps) {
           </div>
 
           <div className="space-y-3">
-            <h4 className="font-medium text-indigo-600 dark:text-indigo-400">
-              ⚡ Processing
+            <h4 className="font-medium text-indigo-600 dark:text-indigo-400 flex items-center">
+              <Zap className="w-5 h-5 mr-2" />
+              Processing
             </h4>
             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
               <li>• Processing time depends on video length</li>
