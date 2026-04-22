@@ -52,5 +52,8 @@ test-transcription.ts
 
 /src/generated/prisma
 
+# Claude Code
+claude/
+
 # App storage (generated media/uploads)
 public/uploads/

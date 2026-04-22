@@ -2,17 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  ensureDirectory,
-  storagePaths,
-  buildUploadsPath,
-  toPublicUrl,
-  resolveStoredPath,
-} from "@/lib/storage";
+import { buildUploadsPath, storageProvider } from "@/lib/storage";
 import { randomUUID } from "node:crypto";
 import { fileTypeFromBuffer } from "file-type";
-import { createWriteStream } from "node:fs";
-import { once } from "node:events";
+import { Readable, Transform } from "node:stream";
 
 const MB = 1024 * 1024;
 const GB = MB * 1024;
@@ -50,7 +43,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 });
     }
 
-    // Validate subscription limit by size (server-side)
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { subscriptionStatus: true },
@@ -74,13 +66,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Detect MIME from a small prefix and stream to disk using a separate tee branch
+    // Detect MIME from a small prefix while streaming the rest to storage
     const webStream = file.stream();
-    // Split stream into two branches: one for detection (small prefix) and one for saving
-     
     const [detectStream, saveStream] = (webStream as ReadableStream<Uint8Array>).tee();
 
-    // Read up to 64KB for detection
     const reader = detectStream.getReader();
     const chunks: Uint8Array[] = [];
     let total = 0;
@@ -91,7 +80,6 @@ export async function POST(req: Request) {
       chunks.push(value);
       total += value.byteLength;
     }
-    // Cancel the remaining of detect branch
     try {
       await reader.cancel();
     } catch (err) {
@@ -117,54 +105,46 @@ export async function POST(req: Request) {
 
     const videoFileExtension = detectedType.ext ?? "mp4";
     const videoFileName = `${randomUUID()}.${videoFileExtension}`;
-    const relativeVideoPath = buildUploadsPath(
-      "uploads",
-      "videos",
-      videoFileName
+    const relativeVideoPath = buildUploadsPath("uploads", "videos", videoFileName);
+
+    // Stream saveStream → Node Readable → size guard → storage provider
+    const nodeReadable = Readable.fromWeb(
+      saveStream as Parameters<typeof Readable.fromWeb>[0]
     );
-    const absoluteVideoPath = resolveStoredPath(relativeVideoPath);
-
-    await ensureDirectory(storagePaths.originalsDir);
-
-    // Stream write using the remaining stream from typeProbe (no buffering in memory)
-    const writeStream = createWriteStream(absoluteVideoPath);
-    const reader2 = saveStream.getReader();
     let writtenTotal = 0;
-    const MAX_FILE_SIZE = maxUploadSizeBytes; // per-plan limit
+    const MAX_FILE_SIZE = maxUploadSizeBytes;
 
-    try {
-      while (true) {
-        const { done, value } = await reader2.read();
-        if (done) break;
-        if (!value) continue;
-
-        writtenTotal += value.byteLength;
+    const sizeGuard = new Transform({
+      transform(
+        chunk: Buffer,
+        _encoding: string,
+        callback: (err?: Error | null, data?: Buffer) => void
+      ) {
+        writtenTotal += chunk.length;
         if (writtenTotal > MAX_FILE_SIZE) {
-          try {
-            await reader2.cancel();
-          } catch (cancelErr) {
-            console.error("[upload:video] error cancelling reader2", cancelErr);
-          }
-          writeStream.destroy();
-          return NextResponse.json(
-            { error: "File exceeds plan size limit" },
-            { status: 413 }
-          );
+          callback(new Error("FILE_TOO_LARGE"));
+        } else {
+          callback(null, chunk);
         }
+      },
+    });
 
-        const canContinue = writeStream.write(value);
-        if (!canContinue) {
-          await once(writeStream, "drain");
-        }
+    let publicVideoUrl: string;
+    try {
+      publicVideoUrl = await storageProvider.save(
+        nodeReadable.pipe(sizeGuard),
+        relativeVideoPath
+      );
+    } catch (err) {
+      if (err instanceof Error && err.message === "FILE_TOO_LARGE") {
+        return NextResponse.json(
+          { error: "File exceeds plan size limit" },
+          { status: 413 }
+        );
       }
-    } finally {
-      await new Promise<void>((resolve, reject) => {
-        writeStream.end(() => resolve());
-        writeStream.on("error", reject);
-      });
+      throw err;
     }
 
-    const publicVideoUrl = toPublicUrl(relativeVideoPath);
     const video = await prisma.video.create({
       data: {
         id: randomUUID(),

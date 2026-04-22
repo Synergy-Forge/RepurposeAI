@@ -5,6 +5,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from './prisma';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { checkLoginRateLimit } from './rate-limiter';
 
 // Environment Variable Validation
 if (!process.env.GOOGLE_CLIENT_ID) {
@@ -46,6 +47,10 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null;
+        }
+        const allowed = await checkLoginRateLimit(credentials.email.toLowerCase());
+        if (!allowed) {
+          throw new Error('Too many login attempts. Please try again later.');
         }
         const user = await prisma.user.findUnique({
           where: { email: credentials.email }
