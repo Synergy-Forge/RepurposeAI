@@ -100,10 +100,14 @@ export const userRouter = createTRPCRouter({
       const token = crypto.randomBytes(32).toString('hex');
       const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-      await ctx.prisma.verificationToken.upsert({
-        where: { token },
-        update: { expires },
-        create: { identifier: user.email, token, expires },
+      // Invalidate any outstanding reset links for this email so only the
+      // newest link is usable.
+      await ctx.prisma.verificationToken.deleteMany({
+        where: { identifier: user.email },
+      });
+
+      await ctx.prisma.verificationToken.create({
+        data: { identifier: user.email, token, expires },
       });
 
       const resetUrl = `${getEmailConfig().webappUrl}/reset-password?token=${token}`;
