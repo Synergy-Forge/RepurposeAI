@@ -11,6 +11,8 @@ import { PasswordResetEmail } from "./templates/auth/PasswordResetEmail";
 import { ProcessingCompleteEmail } from "./templates/processing/ProcessingCompleteEmail";
 import { ProcessingFailedEmail } from "./templates/processing/ProcessingFailedEmail";
 import { SubscriptionActivatedEmail } from "./templates/subscription/SubscriptionActivatedEmail";
+import { SubscriptionCancelledEmail } from "./templates/subscription/SubscriptionCancelledEmail";
+import { SubscriptionDowngradedEmail } from "./templates/subscription/SubscriptionDowngradedEmail";
 import { PaymentFailedEmail } from "./templates/billing/PaymentFailedEmail";
 
 export class EmailService {
@@ -225,9 +227,13 @@ export class EmailService {
         break;
       case EmailType.SUBSCRIPTION_ACTIVATED:
       case EmailType.SUBSCRIPTION_UPGRADED:
-      case EmailType.SUBSCRIPTION_DOWNGRADED:
-      case EmailType.SUBSCRIPTION_CANCELLED:
         html = await render(React.createElement(SubscriptionActivatedEmail, { data }));
+        break;
+      case EmailType.SUBSCRIPTION_DOWNGRADED:
+        html = await render(React.createElement(SubscriptionDowngradedEmail, { data }));
+        break;
+      case EmailType.SUBSCRIPTION_CANCELLED:
+        html = await render(React.createElement(SubscriptionCancelledEmail, { data }));
         break;
       case EmailType.PAYMENT_FAILED:
         html = await render(React.createElement(PaymentFailedEmail, { data }));
