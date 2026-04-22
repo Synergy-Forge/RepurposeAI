@@ -8,6 +8,7 @@ import { enqueueEmail, EmailJob } from "@/lib/queues/emailQueue";
 import { prisma } from "@/lib/prisma";
 import { WelcomeEmail } from "./templates/auth/WelcomeEmail";
 import { PasswordResetEmail } from "./templates/auth/PasswordResetEmail";
+import { EmailVerificationEmail } from "./templates/auth/EmailVerificationEmail";
 import { ProcessingCompleteEmail } from "./templates/processing/ProcessingCompleteEmail";
 import { ProcessingFailedEmail } from "./templates/processing/ProcessingFailedEmail";
 import { SubscriptionActivatedEmail } from "./templates/subscription/SubscriptionActivatedEmail";
@@ -241,6 +242,9 @@ export class EmailService {
       case EmailType.PASSWORD_RESET:
         html = await render(React.createElement(PasswordResetEmail, { data }));
         break;
+      case EmailType.EMAIL_VERIFICATION:
+        html = await render(React.createElement(EmailVerificationEmail, { data }));
+        break;
       default:
         html = this.getHtmlForType(type, data);
     }
@@ -268,6 +272,7 @@ export class EmailService {
       [EmailType.LOGIN_ALERT]: "New login detected",
       [EmailType.DOWNGRADE_TO_FREE]: "Subscription ended",
       [EmailType.PASSWORD_RESET]: "Reset your RepurposeAI password",
+      [EmailType.EMAIL_VERIFICATION]: "Verify your RepurposeAI email address",
     };
 
     return subjects[type] || "Repurpose AI Notification";
@@ -324,6 +329,8 @@ export class EmailService {
         "Your subscription has ended and you've been moved to the Free plan.",
       [EmailType.PASSWORD_RESET]:
         "Click the link in this email to reset your password. The link expires in 1 hour.",
+      [EmailType.EMAIL_VERIFICATION]:
+        "Click the link in this email to verify your address. The link expires in 24 hours.",
     };
 
     return messages[type] || "You have a new notification from Repurpose AI.";

@@ -164,6 +164,38 @@ export const userRouter = createTRPCRouter({
       return { success: true };
     }),
 
+  verifyEmail: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const record = await ctx.prisma.verificationToken.findUnique({
+        where: { token: input.token },
+      });
+
+      if (!record) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invalid or expired verification token',
+        });
+      }
+
+      if (record.expires < new Date()) {
+        await ctx.prisma.verificationToken.delete({ where: { token: input.token } });
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Verification link has expired',
+        });
+      }
+
+      await ctx.prisma.user.update({
+        where: { email: record.identifier },
+        data: { emailVerified: new Date() },
+      });
+
+      await ctx.prisma.verificationToken.delete({ where: { token: input.token } });
+
+      return { success: true };
+    }),
+
   changePassword: protectedProcedure
     .input(
       z.object({

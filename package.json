@@ -20,6 +20,7 @@
     "test:redis": "tsx scripts/test-redis.ts",
     "test:smoke": "tsx scripts/test-smoke.ts",
     "test:video-queue": "tsx scripts/test-video-queue.ts",
+    "test:emails": "tsx scripts/test-emails.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

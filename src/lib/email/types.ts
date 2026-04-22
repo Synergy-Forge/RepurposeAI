@@ -17,6 +17,7 @@ export enum EmailType {
   FEATURE_ANNOUNCEMENT = 'FEATURE_ANNOUNCEMENT',
   REACTIVATION = 'REACTIVATION',
   PASSWORD_RESET = 'PASSWORD_RESET',
+  EMAIL_VERIFICATION = 'EMAIL_VERIFICATION',
 }
 
 export enum EmailStatus {
@@ -55,6 +56,7 @@ export interface EmailTemplateData {
   unsubscribeUrl: string;
   supportUrl: string;
   resetUrl?: string;
+  verificationUrl?: string;
 }
 
 export interface QueuedEmail {
