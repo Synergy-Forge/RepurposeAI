@@ -71,6 +71,7 @@ export async function POST(req: Request) {
       where: { id: session.user.id },
       select: { subscriptionStatus: true },
     });
+    console.log("[upload:video] user lookup done", { hasUser: !!user });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -119,6 +120,7 @@ export async function POST(req: Request) {
     const chunks: Uint8Array[] = [];
     let total = 0;
     const MAX_PROBE = 64 * 1024;
+    console.log("[upload:video] starting mime probe");
     while (total < MAX_PROBE) {
       const { done, value } = await reader.read();
       if (done || !value) break;
@@ -130,6 +132,7 @@ export async function POST(req: Request) {
     } catch (err) {
       console.error("Error cancelling detectStream reader:", err);
     }
+    console.log("[upload:video] mime probe done", { probeBytes: total });
 
     const probe = chunks.length
       ? Buffer.concat(chunks.map((u) => Buffer.from(u)))
