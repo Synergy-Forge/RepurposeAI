@@ -1,0 +1,5 @@
+# Pin Node 24 to satisfy eslint-visitor-keys@5.x engine constraint
+# (^20.19.0 || ^22.13.0 || >=24). Nixpacks' default nodejs_22 resolves to
+# 22.11.0, which falls in the gap between the ^20.19.0 and ^22.13.0 ranges.
+[phases.setup]
+nixPkgs = ["nodejs_24", "npm-10_x", "openssl"]
