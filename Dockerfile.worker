@@ -18,6 +18,9 @@ FROM node:20.18.1-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
+# ffmpeg is required by the video processing pipeline (audio extraction + clip rendering)
+RUN apk add --no-cache ffmpeg
+
 # Security: Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
