@@ -40,11 +40,14 @@ function sanitizeIntegerInRange(value: string | null, min: number, max: number):
 
 export async function POST(req: Request) {
   try {
+    console.log("[upload:video] POST received");
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    console.log("[upload:video] auth ok", { userId: session.user.id });
 
+    console.log("[upload:video] awaiting formData...");
     const form = await req.formData();
     const file = form.get("file");
     const title = (form.get("title") as string | null) ?? null;
@@ -57,6 +60,12 @@ export async function POST(req: Request) {
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 });
     }
+    console.log("[upload:video] formData parsed", {
+      fileSize: file.size,
+      fileName: file.name,
+      hasTitle: !!title,
+      hasTemplate: !!templateSlug,
+    });
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -126,6 +135,7 @@ export async function POST(req: Request) {
       ? Buffer.concat(chunks.map((u) => Buffer.from(u)))
       : Buffer.alloc(0);
     const detectedType = await fileTypeFromBuffer(probe);
+    console.log("[upload:video] mime detected", { mime: detectedType?.mime });
 
     if (!detectedType || !ALLOWED_VIDEO_MIME_TYPES.has(detectedType.mime)) {
       const allowedFormats = Array.from(ALLOWED_VIDEO_MIME_TYPES)
@@ -166,10 +176,12 @@ export async function POST(req: Request) {
 
     let publicVideoUrl: string;
     try {
+      console.log("[upload:video] storage save start", { relativeVideoPath });
       publicVideoUrl = await storageProvider.save(
         nodeReadable.pipe(sizeGuard),
         relativeVideoPath
       );
+      console.log("[upload:video] storage save done", { publicVideoUrl });
     } catch (err) {
       if (err instanceof Error && err.message === "FILE_TOO_LARGE") {
         return NextResponse.json(
@@ -196,6 +208,7 @@ export async function POST(req: Request) {
       },
       select: { id: true },
     });
+    console.log("[upload:video] video row created", { videoId: video.id });
 
     return NextResponse.json({ videoId: video.id }, { status: 200 });
   } catch (err) {
