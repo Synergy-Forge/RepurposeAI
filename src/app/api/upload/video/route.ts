@@ -45,9 +45,7 @@ export async function POST(req: Request) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.log("[upload:video] auth ok", { userId: session.user.id });
 
-    console.log("[upload:video] awaiting formData...");
     const form = await req.formData();
     const file = form.get("file");
     const title = (form.get("title") as string | null) ?? null;
@@ -60,18 +58,11 @@ export async function POST(req: Request) {
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 });
     }
-    console.log("[upload:video] formData parsed", {
-      fileSize: file.size,
-      fileName: file.name,
-      hasTitle: !!title,
-      hasTemplate: !!templateSlug,
-    });
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { subscriptionStatus: true },
     });
-    console.log("[upload:video] user lookup done", { hasUser: !!user });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -113,32 +104,10 @@ export async function POST(req: Request) {
       platformRaw && ALLOWED_PLATFORMS.has(platformRaw) ? platformRaw : null;
     const clipLength = sanitizeIntegerInRange(clipLengthRaw, 10, 300);
 
-    const webStream = file.stream();
-    const [detectStream, saveStream] = (webStream as ReadableStream<Uint8Array>).tee();
-
-    const reader = detectStream.getReader();
-    const chunks: Uint8Array[] = [];
-    let total = 0;
     const MAX_PROBE = 64 * 1024;
-    console.log("[upload:video] starting mime probe");
-    while (total < MAX_PROBE) {
-      const { done, value } = await reader.read();
-      if (done || !value) break;
-      chunks.push(value);
-      total += value.byteLength;
-    }
-    try {
-      await reader.cancel();
-    } catch (err) {
-      console.error("Error cancelling detectStream reader:", err);
-    }
-    console.log("[upload:video] mime probe done", { probeBytes: total });
-
-    const probe = chunks.length
-      ? Buffer.concat(chunks.map((u) => Buffer.from(u)))
-      : Buffer.alloc(0);
+    const probeBlob = file.slice(0, MAX_PROBE);
+    const probe = Buffer.from(await probeBlob.arrayBuffer());
     const detectedType = await fileTypeFromBuffer(probe);
-    console.log("[upload:video] mime detected", { mime: detectedType?.mime });
 
     if (!detectedType || !ALLOWED_VIDEO_MIME_TYPES.has(detectedType.mime)) {
       const allowedFormats = Array.from(ALLOWED_VIDEO_MIME_TYPES)
@@ -157,7 +126,7 @@ export async function POST(req: Request) {
     const relativeVideoPath = buildUploadsPath("uploads", "videos", videoFileName);
 
     const nodeReadable = Readable.fromWeb(
-      saveStream as Parameters<typeof Readable.fromWeb>[0]
+      file.stream() as Parameters<typeof Readable.fromWeb>[0]
     );
     let writtenTotal = 0;
     const MAX_FILE_SIZE = maxUploadSizeBytes;
