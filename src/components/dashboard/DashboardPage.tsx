@@ -63,7 +63,7 @@ const statusIconMap: Record<string, LucideIcon> = {
   failed: AlertCircle,
 };
 
-function timeAgo(date: Date): string {
+function timeAgo(date: Date | string): string {
   const diffMs = Date.now() - new Date(date).getTime();
   const diffMins = Math.floor(diffMs / 60000);
   if (diffMins < 60) return `${diffMins}m ago`;

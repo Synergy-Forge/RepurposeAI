@@ -242,7 +242,7 @@ export function ClipEditor({ clipId }: ClipEditorProps) {
               disabled={templatesQuery.isLoading}
             >
               <option value="">(No template — keep current style)</option>
-              {templatesQuery.data?.map((t) => (
+              {templatesQuery.data?.map((t: { slug: string; name: string }) => (
                 <option key={t.slug} value={t.slug}>
                   {t.name}
                 </option>
