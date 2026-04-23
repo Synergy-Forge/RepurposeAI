@@ -2,7 +2,7 @@
 
 FROM node:20.19.0-alpine AS prod-deps
 WORKDIR /app
-COPY package*.json .npmrc ./
+COPY package.json package-lock.json .npmrc ./
 COPY prisma ./prisma
 ARG HUSKY=0
 ENV HUSKY=${HUSKY}
@@ -11,7 +11,7 @@ RUN npm ci --omit=dev --ignore-scripts && \
 
 FROM node:20.19.0-alpine AS build-deps
 WORKDIR /app
-COPY package*.json .npmrc ./
+COPY package.json package-lock.json .npmrc ./
 COPY prisma ./prisma
 ARG HUSKY=0
 ENV HUSKY=${HUSKY}
