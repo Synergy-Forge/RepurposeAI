@@ -17,6 +17,15 @@ type UploadItem = {
   title?: string;
 };
 
+type TemplateRow = {
+  slug: string;
+  name: string;
+  description: string;
+  aspectRatio: string;
+  clipLengthMin: number;
+  clipLengthMax: number;
+};
+
 interface UploadPageProps {
   onUpload?: (files: File[]) => void;
 }
@@ -170,7 +179,9 @@ export function UploadPage({ onUpload }: UploadPageProps) {
     });
   }, [uploadQueue, polledMap]);
 
-  const selectedTemplate = templatesQuery.data?.find((t) => t.slug === templateSlug) ?? null;
+  const selectedTemplate = ((templatesQuery.data as TemplateRow[] | undefined) ?? []).find(
+    (t) => t.slug === templateSlug,
+  ) ?? null;
 
   return (
     <div className="space-y-8">
@@ -195,7 +206,7 @@ export function UploadPage({ onUpload }: UploadPageProps) {
               disabled={templatesQuery.isLoading}
             >
               <option value="">(No template — default 9:16 vertical)</option>
-              {templatesQuery.data?.map((t) => (
+              {(templatesQuery.data as TemplateRow[] | undefined)?.map((t) => (
                 <option key={t.slug} value={t.slug}>
                   {t.name} — {t.aspectRatio}, {t.clipLengthMin}–{t.clipLengthMax}s
                 </option>

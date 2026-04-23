@@ -248,22 +248,25 @@ export function TemplatesPage() {
   const templatesQuery = trpc.template.list.useQuery();
 
   const platforms = useMemo<string[]>(() => {
-    if (!templatesQuery.data) return [];
+    const data = templatesQuery.data as TemplateRow[] | undefined;
+    if (!data) return [];
     const set = new Set<string>();
-    for (const template of templatesQuery.data) set.add(template.platform);
+    for (const template of data) set.add(template.platform);
     return Array.from(set).sort();
   }, [templatesQuery.data]);
 
-  const filtered = useMemo(() => {
-    if (!templatesQuery.data) return [];
-    if (platformFilter === "all") return templatesQuery.data;
-    return templatesQuery.data.filter((t) => t.platform === platformFilter);
+  const filtered = useMemo<TemplateRow[]>(() => {
+    const data = templatesQuery.data as TemplateRow[] | undefined;
+    if (!data) return [];
+    if (platformFilter === "all") return data;
+    return data.filter((t) => t.platform === platformFilter);
   }, [templatesQuery.data, platformFilter]);
 
-  const selected =
-    selectedSlug && templatesQuery.data
-      ? templatesQuery.data.find((t) => t.slug === selectedSlug) ?? null
-      : null;
+  const selected = (() => {
+    const data = templatesQuery.data as TemplateRow[] | undefined;
+    if (!selectedSlug || !data) return null;
+    return data.find((t) => t.slug === selectedSlug) ?? null;
+  })();
 
   return (
     <div className="space-y-8">

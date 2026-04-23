@@ -6,6 +6,17 @@ import { Edit3, Clock, Film } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { Skeleton } from "@/components/ui/skeleton";
 
+type ClipRow = {
+  id: string;
+  title: string;
+  aspectRatio: string;
+  videoUrl: string | null;
+  startTime: number;
+  endTime: number;
+  captions: string | null;
+  video: { title: string };
+};
+
 function formatDuration(seconds: number): string {
   const rounded = Math.max(0, Math.round(seconds));
   const minutes = Math.floor(rounded / 60);
@@ -17,16 +28,18 @@ export function EditorPage() {
   const [aspectFilter, setAspectFilter] = useState<string>("all");
   const clipsQuery = trpc.video.getAllUserClips.useQuery();
 
-  const filtered = useMemo(() => {
-    if (!clipsQuery.data) return [];
-    if (aspectFilter === "all") return clipsQuery.data;
-    return clipsQuery.data.filter((c) => c.aspectRatio === aspectFilter);
+  const filtered = useMemo<ClipRow[]>(() => {
+    const data = clipsQuery.data as ClipRow[] | undefined;
+    if (!data) return [];
+    if (aspectFilter === "all") return data;
+    return data.filter((c) => c.aspectRatio === aspectFilter);
   }, [clipsQuery.data, aspectFilter]);
 
   const aspectRatios = useMemo<string[]>(() => {
-    if (!clipsQuery.data) return [];
+    const data = clipsQuery.data as ClipRow[] | undefined;
+    if (!data) return [];
     const set = new Set<string>();
-    for (const clip of clipsQuery.data) set.add(clip.aspectRatio);
+    for (const clip of data) set.add(clip.aspectRatio);
     return Array.from(set).sort();
   }, [clipsQuery.data]);
 

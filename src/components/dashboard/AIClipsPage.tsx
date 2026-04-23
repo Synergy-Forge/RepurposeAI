@@ -121,7 +121,7 @@ export function AIClipsPage() {
               disabled={templatesQuery.isLoading}
             >
               <option value="">(None — use the settings below)</option>
-              {templatesQuery.data?.map((t) => (
+              {templatesQuery.data?.map((t: { slug: string; name: string; aspectRatio: string }) => (
                 <option key={t.slug} value={t.slug}>
                   {t.name} — {t.aspectRatio}
                 </option>
